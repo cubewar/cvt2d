@@ -1,0 +1,23 @@
+# Build directories
+build/
+bin/
+obj/
+out/
+.cache/
+
+# Executables
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Visual Studio / VS Code
+.vscode/
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.suo
+
+# OS generated files
+.DS_Store
+Thumbs.db
