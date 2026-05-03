@@ -19,6 +19,10 @@ bool SharedConfig::Init(bool isCreator) {
             data->suitOffsetY = 50.0f;
             data->particleSpeedMulti = 1.0f;
             data->particleLifeMulti = 1.0f;
+            data->colorR = 255.0f;
+            data->colorG = 40.0f;
+            data->colorB = 10.0f;
+            data->coreSizeMulti = 1.0f;
         }
     } else {
         hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, "Local\\VTuberConfigMap");

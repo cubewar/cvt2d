@@ -28,7 +28,8 @@ void App::Init() {
 
   // Mic init
   if (!m_mic.Start()) {
-    std::cerr << "[App] WARNING: Failed to start microphone capture." << std::endl;
+    std::cerr << "[App] WARNING: Failed to start microphone capture."
+              << std::endl;
   }
 
   // --- Camera pixel buffer ---
@@ -104,7 +105,11 @@ void App::Update(float dt) {
   if (m_sharedConfig.data) {
     isStreamMode = m_sharedConfig.data->streamMode;
     fireScaleMulti = m_sharedConfig.data->fireSizeMultiplier;
-    m_particles.SetColorMode(m_sharedConfig.data->colorMode);
+    m_particles.SetCustomColor(
+        (unsigned char)m_sharedConfig.data->colorR,
+        (unsigned char)m_sharedConfig.data->colorG,
+        (unsigned char)m_sharedConfig.data->colorB);
+    m_particles.SetCoreSizeMulti(m_sharedConfig.data->coreSizeMulti);
     m_particles.SetParticleSpeedMultiplier(
         m_sharedConfig.data->particleSpeedMulti);
     m_particles.SetParticleLifeMultiplier(
@@ -131,9 +136,10 @@ void App::Update(float dt) {
   m_particles.SetSmokeMode(!face.detected);
 
   // Apply fire scale override and microphone volume boost
-  float micVol = m_mic.GetVolume(); // 0.0 to 1.0
+  float micVol = m_mic.GetVolume();        // 0.0 to 1.0
   float micBoost = 1.0f + (micVol * 3.0f); // Up to 3x scale from mic
-  m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti * micBoost);
+  m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti *
+                           micBoost);
 
   // --- Update particles ---
   m_particles.Update(dt);
@@ -218,7 +224,7 @@ void App::Draw() {
     float scale = m_fireHead.GetFireScale() * 0.8f; // Scale suit with fire
     Vector2 firePos = m_fireHead.GetFirePosition();
 
-    float suitOffsetY = 10.0f;
+    float suitOffsetY = -50.0f;
     if (m_sharedConfig.data)
       suitOffsetY = m_sharedConfig.data->suitOffsetY;
 

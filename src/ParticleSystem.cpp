@@ -78,9 +78,16 @@ void ParticleSystem::SetEmotionScore(float score)
     m_emotionScore = std::max(0.0f, std::min(1.0f, score));
 }
 
-void ParticleSystem::SetColorMode(int mode)
+void ParticleSystem::SetCustomColor(unsigned char r, unsigned char g, unsigned char b)
 {
-    m_colorMode = mode;
+    m_customR = r;
+    m_customG = g;
+    m_customB = b;
+}
+
+void ParticleSystem::SetCoreSizeMulti(float multi)
+{
+    m_coreSizeMulti = multi;
 }
 
 void ParticleSystem::SetParticleSpeedMultiplier(float multi)
@@ -159,44 +166,36 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
         return {r, g, b, a};
     }
 
-    if (m_colorMode == 1) { 
-        // Blue Mode
-        if (lifeRatio > 0.7f)      { r = 200; g = 200; b = 255; a = 200; }
-        else if (lifeRatio > 0.4f) { r = 20;  g = 180; b = 255; a = 150; }
-        else if (lifeRatio > 0.15f){ r = 0;   g = 50;  b = 255; a = 100; }
-        else                       { r = 0;   g = 10;  b = 150; a = (unsigned char)(lifeRatio * 300); }
-    } else if (m_colorMode == 2) { 
-        // Purple Mode
-        if (lifeRatio > 0.7f)      { r = 255; g = 150; b = 255; a = 200; }
-        else if (lifeRatio > 0.4f) { r = 200; g = 20;  b = 255; a = 150; }
-        else if (lifeRatio > 0.15f){ r = 100; g = 0;   b = 150; a = 100; }
-        else                       { r = 40;  g = 0;   b = 80;  a = (unsigned char)(lifeRatio * 300); }
-    } else if (m_colorMode == 3) { 
-        // Red Mode
-        if (lifeRatio > 0.7f)      { r = 255; g = 150; b = 100; a = 200; }
-        else if (lifeRatio > 0.4f) { r = 255; g = 40;  b = 10;  a = 150; }
-        else if (lifeRatio > 0.15f){ r = 180; g = 0;   b = 0;   a = 100; }
-        else                       { r = 80;  g = 0;   b = 0;   a = (unsigned char)(lifeRatio * 300); }
+    // Dynamic fire gradient based entirely on user's Main Color (m_customR/G/B)
+    float mainR = m_customR;
+    float mainG = m_customG;
+    float mainB = m_customB;
+
+    if (lifeRatio > 0.7f) {
+        // Inner color: Main + bright offset (towards white)
+        r = (unsigned char)std::min(255.0f, mainR + 200.0f);
+        g = (unsigned char)std::min(255.0f, mainG + 200.0f);
+        b = (unsigned char)std::min(255.0f, mainB + 200.0f);
+        a = 200;
+    } else if (lifeRatio > 0.4f) {
+        // Mid color: Main + slight offset
+        r = (unsigned char)std::min(255.0f, mainR + 100.0f);
+        g = (unsigned char)std::min(255.0f, mainG + 100.0f);
+        b = (unsigned char)std::min(255.0f, mainB + 100.0f);
+        a = 150;
+    } else if (lifeRatio > 0.15f) {
+        // Outer color: Pure Main Color
+        r = (unsigned char)mainR;
+        g = (unsigned char)mainG;
+        b = (unsigned char)mainB;
+        a = 100;
     } else {
-        // Normal (Emotion) Mode
-        // Red outer, yellow mid, white in the middle
-        if (lifeRatio > 0.7f)      { r = 255; g = 255; b = 200; a = 180; } // White/Yellow Core
-        else if (lifeRatio > 0.4f) { r = 255; g = 200; b = 20;  a = 140; } // Yellow Mid
-        else if (lifeRatio > 0.15f){ r = 255; g = 40;  b = 10;  a = 100; } // Red Outer
-        else                       { r = 150; g = 10;  b = 10;  a = (unsigned char)(lifeRatio * 300); } // Fade
-
-        // Apply emotion shifts
-        float excitedShift = (m_emotionScore > 0.5f) ? (m_emotionScore - 0.5f) * 2.0f : 0.0f; // 0.0 to 1.0
-        float chillShift   = (m_emotionScore < 0.5f) ? (0.5f - m_emotionScore) * 2.0f : 0.0f; // 0.0 to 1.0
-
-        if (excitedShift > 0.0f) {
-            r = (unsigned char)std::min(255, r + (int)(excitedShift * 35));
-            g = (unsigned char)std::min(255, g + (int)(excitedShift * 110));
-            b = (unsigned char)std::min(255, b + (int)(excitedShift * 200));
-        } else if (chillShift > 0.0f) {
-            g = (unsigned char)std::max(0, g - (int)(chillShift * 120));
-            b = (unsigned char)std::max(0, b - (int)(chillShift * 30));
-        }
+        // Fade out
+        float fade = lifeRatio / 0.15f;
+        r = (unsigned char)(mainR * fade);
+        g = (unsigned char)(mainG * fade);
+        b = (unsigned char)(mainB * fade);
+        a = (unsigned char)(fade * 300);
     }
 
     return {r, g, b, a};
@@ -253,9 +252,9 @@ void ParticleSystem::Draw()
 {
     // Draw the core dot behind the particles, matching the base fire color
     // But limit its size so it doesn't cover everything when scale is large
-    if (!m_isSmoke) {
+    if (!m_isSmoke && m_coreSizeMulti > 0.0f) {
         BeginBlendMode(BLEND_ADDITIVE);
-        float coreSize = std::min(40.0f, 25.0f * m_fireScale);
+        float coreSize = std::min(40.0f, 25.0f * m_fireScale) * m_coreSizeMulti;
         Color coreColor = GetFireColor(0.9f); // Get the core color
         coreColor.a = 200; // Slightly transparent glow
         DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 10.0f, coreSize,

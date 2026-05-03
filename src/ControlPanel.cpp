@@ -19,7 +19,7 @@ bool DoButton(Rectangle rect, const char* text, Color bg = LIGHTGRAY, Color fg =
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN);
-    InitWindow(500, 450, "VTuber Control Panel");
+    InitWindow(500, 600, "VTuber Control Panel");
     SetTargetFPS(60);
 
     SharedConfig config;
@@ -36,10 +36,10 @@ int main() {
             config.data->streamMode = !config.data->streamMode;
         }
 
-        if (IsKeyPressed(KEY_ONE)) config.data->colorMode = 0; // Emotion
-        if (IsKeyPressed(KEY_TWO)) config.data->colorMode = 1; // Blue
-        if (IsKeyPressed(KEY_THREE)) config.data->colorMode = 2; // Purple
-        if (IsKeyPressed(KEY_FOUR)) config.data->colorMode = 3; // Red
+        if (IsKeyPressed(KEY_ONE)) { config.data->colorMode = 0; config.data->colorR = 255; config.data->colorG = 40; config.data->colorB = 10; } // Normal
+        if (IsKeyPressed(KEY_TWO)) { config.data->colorMode = 1; config.data->colorR = 0; config.data->colorG = 50; config.data->colorB = 255; } // Blue
+        if (IsKeyPressed(KEY_THREE)) { config.data->colorMode = 2; config.data->colorR = 150; config.data->colorG = 20; config.data->colorB = 255; } // Purple
+        if (IsKeyPressed(KEY_FOUR)) { config.data->colorMode = 3; config.data->colorR = 255; config.data->colorG = 20; config.data->colorB = 10; } // Red
         // -----------------------------------
 
         BeginDrawing();
@@ -55,8 +55,8 @@ int main() {
         }
         DrawText(TextFormat("[S] Status: %s", config.data->streamMode ? "ON" : "OFF"), 180, 75, 16, smColor);
 
-        int startY = 130;
-        int spacing = 50;
+        int startY = 120;
+        int spacing = 40;
 
         // 1. Fire Size
         DrawText(TextFormat("Fire Size: %.2fx", config.data->fireSizeMultiplier), 20, startY + 5, 16, DARKGRAY);
@@ -81,16 +81,38 @@ int main() {
         if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->suitOffsetY -= 10.0f;
         if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->suitOffsetY += 10.0f;
 
+        // 5. Fire Color RGB
+        startY += spacing;
+        DrawText(TextFormat("Fire Color R: %.0f", config.data->colorR), 20, startY + 5, 16, RED);
+        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->colorR = std::max(0.0f, config.data->colorR - 5.0f);
+        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->colorR = std::min(255.0f, config.data->colorR + 5.0f);
+
+        startY += spacing;
+        DrawText(TextFormat("Fire Color G: %.0f", config.data->colorG), 20, startY + 5, 16, GREEN);
+        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->colorG = std::max(0.0f, config.data->colorG - 5.0f);
+        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->colorG = std::min(255.0f, config.data->colorG + 5.0f);
+
+        startY += spacing;
+        DrawText(TextFormat("Fire Color B: %.0f", config.data->colorB), 20, startY + 5, 16, BLUE);
+        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->colorB = std::max(0.0f, config.data->colorB - 5.0f);
+        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->colorB = std::min(255.0f, config.data->colorB + 5.0f);
+
+        // 6. Core Size
+        startY += spacing;
+        DrawText(TextFormat("White Core Size: %.2fx", config.data->coreSizeMulti), 20, startY + 5, 16, DARKGRAY);
+        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->coreSizeMulti = std::max(0.0f, config.data->coreSizeMulti - 0.1f);
+        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->coreSizeMulti = std::min(3.0f, config.data->coreSizeMulti + 0.1f);
+
         // Colors (Buttons)
         startY += spacing + 10;
-        DrawText("Colors [1-4]:", 20, startY + 5, 16, DARKGRAY);
+        DrawText("Presets [1-4]:", 20, startY + 5, 16, DARKGRAY);
         
-        if (DoButton({150, (float)startY, 70, 30}, "Normal", config.data->colorMode == 0 ? BLUE : LIGHTGRAY, config.data->colorMode == 0 ? WHITE : DARKGRAY)) config.data->colorMode = 0;
-        if (DoButton({230, (float)startY, 60, 30}, "Blue", config.data->colorMode == 1 ? BLUE : LIGHTGRAY, config.data->colorMode == 1 ? WHITE : DARKGRAY)) config.data->colorMode = 1;
-        if (DoButton({300, (float)startY, 60, 30}, "Purple", config.data->colorMode == 2 ? BLUE : LIGHTGRAY, config.data->colorMode == 2 ? WHITE : DARKGRAY)) config.data->colorMode = 2;
-        if (DoButton({370, (float)startY, 60, 30}, "Red", config.data->colorMode == 3 ? BLUE : LIGHTGRAY, config.data->colorMode == 3 ? WHITE : DARKGRAY)) config.data->colorMode = 3;
+        if (DoButton({150, (float)startY, 70, 30}, "Normal", config.data->colorMode == 0 ? BLUE : LIGHTGRAY, config.data->colorMode == 0 ? WHITE : DARKGRAY)) { config.data->colorMode = 0; config.data->colorR = 255; config.data->colorG = 40; config.data->colorB = 10; }
+        if (DoButton({230, (float)startY, 60, 30}, "Blue", config.data->colorMode == 1 ? BLUE : LIGHTGRAY, config.data->colorMode == 1 ? WHITE : DARKGRAY)) { config.data->colorMode = 1; config.data->colorR = 0; config.data->colorG = 50; config.data->colorB = 255; }
+        if (DoButton({300, (float)startY, 60, 30}, "Purple", config.data->colorMode == 2 ? BLUE : LIGHTGRAY, config.data->colorMode == 2 ? WHITE : DARKGRAY)) { config.data->colorMode = 2; config.data->colorR = 150; config.data->colorG = 20; config.data->colorB = 255; }
+        if (DoButton({370, (float)startY, 60, 30}, "Red", config.data->colorMode == 3 ? BLUE : LIGHTGRAY, config.data->colorMode == 3 ? WHITE : DARKGRAY)) { config.data->colorMode = 3; config.data->colorR = 255; config.data->colorG = 20; config.data->colorB = 10; }
         
-        DrawText("Ensure main VTuber window is running!", 20, 420, 12, GRAY);
+        DrawText("Ensure main VTuber window is running!", 20, 560, 12, GRAY);
 
         EndDrawing();
     }

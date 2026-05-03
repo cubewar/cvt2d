@@ -57,10 +57,14 @@ public:
     void SetEmotionScore(float score);
 
     /**
-     * Set manual color override mode.
-     * 0: Normal(Emotion), 1: Blue, 2: Purple, 3: Red
+     * Set arbitrary RGB color for the fire particles.
      */
-    void SetColorMode(int mode);
+    void SetCustomColor(unsigned char r, unsigned char g, unsigned char b);
+
+    /**
+     * Set the size multiplier for the white inner core.
+     */
+    void SetCoreSizeMulti(float multi);
 
     /**
      * Set particle speed multiplier.
@@ -111,7 +115,10 @@ private:
     float  m_emitterY        = 300.0f;
     float  m_fireScale       = 1.0f;
     float  m_emotionScore    = 0.5f;
-    int    m_colorMode       = 0;
+    unsigned char m_customR  = 255;
+    unsigned char m_customG  = 40;
+    unsigned char m_customB  = 10;
+    float  m_coreSizeMulti   = 1.0f;
     bool   m_isSmoke         = false;
     float  m_speedMulti      = 1.0f;
     float  m_lifeMulti       = 1.0f;
