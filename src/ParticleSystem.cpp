@@ -185,15 +185,15 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
 
     if (lifeRatio > m_innerRatio) {
         // Inner color: Main + bright offset (towards white)
-        r = (unsigned char)std::min(255.0f, mainR + 200.0f);
-        g = (unsigned char)std::min(255.0f, mainG + 200.0f);
-        b = (unsigned char)std::min(255.0f, mainB + 200.0f);
+        r = (unsigned char)std::min(255.0f, mainR + 160.0f);
+        g = (unsigned char)std::min(255.0f, mainG + 160.0f);
+        b = (unsigned char)std::min(255.0f, mainB + 160.0f);
         a = 200;
     } else if (lifeRatio > m_midRatio) {
         // Mid color: Main + slight offset
-        r = (unsigned char)std::min(255.0f, mainR + 100.0f);
-        g = (unsigned char)std::min(255.0f, mainG + 100.0f);
-        b = (unsigned char)std::min(255.0f, mainB + 100.0f);
+        r = (unsigned char)std::min(255.0f, mainR + 50.0f);
+        g = (unsigned char)std::min(255.0f, mainG + 50.0f);
+        b = (unsigned char)std::min(255.0f, mainB + 50.0f);
         a = 150;
     } else if (lifeRatio > m_outerRatio) {
         // Outer color: Pure Main Color
