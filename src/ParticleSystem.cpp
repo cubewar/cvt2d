@@ -78,11 +78,16 @@ void ParticleSystem::SetEmotionScore(float score)
     m_emotionScore = std::max(0.0f, std::min(1.0f, score));
 }
 
-void ParticleSystem::SetCustomColor(unsigned char r, unsigned char g, unsigned char b)
+void ParticleSystem::SetPhaseColors(Color inner, Color mid, Color outer)
 {
-    m_customR = r;
-    m_customG = g;
-    m_customB = b;
+    m_innerR = inner.r; m_innerG = inner.g; m_innerB = inner.b;
+    m_midR   = mid.r;   m_midG   = mid.g;   m_midB   = mid.b;
+    m_outerR = outer.r; m_outerG = outer.g; m_outerB = outer.b;
+}
+
+void ParticleSystem::SetSeedShape(float strength)
+{
+    m_seedShapeMulti = strength;
 }
 
 void ParticleSystem::SetCoreSizeMulti(float multi)
@@ -154,7 +159,10 @@ void ParticleSystem::EmitParticle()
     p.velocity = {cosf(angle) * speed, sinf(angle) * speed};
 
     // --- Life & size ---
-    p.maxLife  = RandFloat(m_baseLifeMin, m_baseLifeMax) * m_lifeMulti;
+    float distFromCenter = fabsf(cosf(angle)); // Higher value means more "upwards" / central in the cone
+    float lifeScale = 1.0f + (distFromCenter * (m_seedShapeMulti - 1.0f));
+    
+    p.maxLife  = RandFloat(m_baseLifeMin, m_baseLifeMax) * m_lifeMulti * lifeScale;
     p.life     = p.maxLife;
     // Base size increased for anime fire style
     p.size     = RandFloat(m_baseSizeMin * 2.5f, m_baseSizeMax * 2.5f) * m_fireScale;
@@ -170,35 +178,30 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
 {
     unsigned char r, g, b, a;
 
-    // Base fire color math
-    float mainR = m_customR;
-    float mainG = m_customG;
-    float mainB = m_customB;
-
     if (lifeRatio > m_innerRatio) {
-        // Inner color: Main + bright offset (towards white)
-        r = (unsigned char)std::min(255.0f, mainR + 160.0f);
-        g = (unsigned char)std::min(255.0f, mainG + 160.0f);
-        b = (unsigned char)std::min(255.0f, mainB + 160.0f);
+        // Inner color
+        r = m_innerR;
+        g = m_innerG;
+        b = m_innerB;
         a = 200;
     } else if (lifeRatio > m_midRatio) {
-        // Mid color: Main + slight offset
-        r = (unsigned char)std::min(255.0f, mainR + 50.0f);
-        g = (unsigned char)std::min(255.0f, mainG + 50.0f);
-        b = (unsigned char)std::min(255.0f, mainB + 50.0f);
+        // Mid color
+        r = m_midR;
+        g = m_midG;
+        b = m_midB;
         a = 150;
     } else if (lifeRatio > m_outerRatio) {
-        // Outer color: Pure Main Color
-        r = (unsigned char)mainR;
-        g = (unsigned char)mainG;
-        b = (unsigned char)mainB;
+        // Outer color
+        r = m_outerR;
+        g = m_outerG;
+        b = m_outerB;
         a = 100;
     } else {
         // Fade out
         float fade = std::max(0.0f, lifeRatio / std::max(0.001f, m_outerRatio));
-        r = (unsigned char)(mainR * fade);
-        g = (unsigned char)(mainG * fade);
-        b = (unsigned char)(mainB * fade);
+        r = (unsigned char)(m_outerR * fade);
+        g = (unsigned char)(m_outerG * fade);
+        b = (unsigned char)(m_outerB * fade);
         a = (unsigned char)(fade * 300);
     }
 

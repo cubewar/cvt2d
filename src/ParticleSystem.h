@@ -58,9 +58,14 @@ public:
   void SetEmotionScore(float score);
 
   /**
-   * Set arbitrary RGB color for the fire particles.
+   * Set RGB colors for each fire phase.
    */
-  void SetCustomColor(unsigned char r, unsigned char g, unsigned char b);
+  void SetPhaseColors(Color inner, Color mid, Color outer);
+
+  /**
+   * Set how much the middle particles are elongated (seed shape).
+   */
+  void SetSeedShape(float strength);
 
   /**
    * Set the size multiplier for the white inner core.
@@ -126,9 +131,10 @@ private:
   float m_emitterY = 300.0f;
   float m_fireScale = 1.0f;
   float m_emotionScore = 0.5f;
-  unsigned char m_customR = 255;
-  unsigned char m_customG = 40;
-  unsigned char m_customB = 10;
+  unsigned char m_innerR = 255, m_innerG = 255, m_innerB = 255;
+  unsigned char m_midR   = 255, m_midG   = 150, m_midB   = 50;
+  unsigned char m_outerR = 255, m_outerG = 50,  m_outerB = 20;
+
   float m_coreSizeMulti = 1.0f;
   float m_particleOpacity = 1.0f;
   float m_innerRatio = 0.85f;
@@ -141,6 +147,9 @@ private:
   float m_emissionRate = 800.0f; // particles/sec
   float m_emissionAccum = 0.0f;  // Fractional particle accumulator
 
+  // Particle shape tuning
+  float m_seedShapeMulti = 1.5f; // How much longer center particles live
+  
   // Particle spawn parameters (base values, scaled by m_fireScale)
   float m_baseSpeedMin = 80.0f;
   float m_baseSpeedMax = 200.0f;

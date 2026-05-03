@@ -106,10 +106,12 @@ void App::Update(float dt) {
   if (m_sharedConfig.data) {
     isStreamMode = m_sharedConfig.data->streamMode;
     fireScaleMulti = m_sharedConfig.data->fireSizeMultiplier;
-    m_particles.SetCustomColor(
-        (unsigned char)m_sharedConfig.data->colorR,
-        (unsigned char)m_sharedConfig.data->colorG,
-        (unsigned char)m_sharedConfig.data->colorB);
+    m_particles.SetPhaseColors(
+        {(unsigned char)m_sharedConfig.data->innerR, (unsigned char)m_sharedConfig.data->innerG, (unsigned char)m_sharedConfig.data->innerB, 255},
+        {(unsigned char)m_sharedConfig.data->midR,   (unsigned char)m_sharedConfig.data->midG,   (unsigned char)m_sharedConfig.data->midB,   255},
+        {(unsigned char)m_sharedConfig.data->outerR, (unsigned char)m_sharedConfig.data->outerG, (unsigned char)m_sharedConfig.data->outerB, 255}
+    );
+    m_particles.SetSeedShape(m_sharedConfig.data->seedShape);
     m_particles.SetCoreSizeMulti(m_sharedConfig.data->coreSizeMulti);
     m_particles.SetParticleSpeedMultiplier(
         m_sharedConfig.data->particleSpeedMulti);
@@ -203,7 +205,13 @@ void App::Draw() {
   BeginDrawing();
 
   // --- Background ---
-  ClearBackground(BLACK); // Changed to pure black for better compositing of additive fire
+  if (m_sharedConfig.data) {
+    ClearBackground({(unsigned char)m_sharedConfig.data->bgColorR, 
+                     (unsigned char)m_sharedConfig.data->bgColorG, 
+                     (unsigned char)m_sharedConfig.data->bgColorB, 255});
+  } else {
+    ClearBackground(BLACK); 
+  }
 
   // --- Camera background ---
   if (m_showCamera && m_cameraTextureReady) {
@@ -231,8 +239,9 @@ void App::Draw() {
     if (m_sharedConfig.data)
       suitOffsetY = m_sharedConfig.data->suitOffsetY;
 
-    Rectangle source = {0.0f, 0.0f, (float)m_suitTexture.width,
-                        (float)m_suitTexture.height};
+    // Shrink source by 1 pixel to avoid edge bleed glitching
+    Rectangle source = {1.0f, 1.0f, (float)m_suitTexture.width - 2.0f,
+                        (float)m_suitTexture.height - 2.0f};
     // Position suit below the fire so the collar lines up
     Rectangle dest = {firePos.x, firePos.y + suitOffsetY * scale,
                       (float)m_suitTexture.width * scale,

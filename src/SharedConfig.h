@@ -3,19 +3,28 @@
 struct SharedConfigData {
     bool streamMode;
     float fireSizeMultiplier;
-    int colorMode;       // 0: Normal(Emotion), 1: Blue, 2: Purple, 3: Red (Kept for backwards compatibility or override)
+    int colorMode;
     float suitOffsetY;
     float particleSpeedMulti;
     float particleLifeMulti;
-    float colorR;
-    float colorG;
-    float colorB;
+    // Main base color
+    float colorR, colorG, colorB;
+    // Per-phase color offsets (absolute RGB, not offsets)
+    float innerR, innerG, innerB;
+    float midR,   midG,   midB;
+    float outerR, outerG, outerB;
+    // Other controls
     float coreSizeMulti;
     float voiceMultiplier;
     float particleOpacity;
     float innerRatio;
     float midRatio;
     float outerRatio;
+    float bgColorR;
+    float bgColorG;
+    float bgColorB;
+    float spreadAngle;
+    float seedShape;
 };
 
 class SharedConfig {

@@ -22,7 +22,7 @@ bool DoSliderFloat(Rectangle rect, float* value, float min, float max, const cha
     bool changed = false;
     
     // Draw label
-    DrawText(label, rect.x, rect.y - 18, 16, color);
+    DrawText(label, (int)rect.x, (int)rect.y - 18, 16, color);
     
     // Draw track
     DrawRectangleRec(rect, LIGHTGRAY);
@@ -46,14 +46,14 @@ bool DoSliderFloat(Rectangle rect, float* value, float min, float max, const cha
     DrawRectangleLinesEx(knob, 1, DARKGRAY);
     
     // Draw value text
-    DrawText(TextFormat("%.2f", *value), rect.x + rect.width + 10, rect.y + rect.height/2 - 8, 16, DARKGRAY);
+    DrawText(TextFormat("%.2f", *value), (int)(rect.x + rect.width + 10), (int)(rect.y + rect.height/2 - 8), 16, DARKGRAY);
     
     return changed;
 }
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN);
-    InitWindow(500, 900, "VTuber Control Panel");
+    InitWindow(1000, 900, "VTuber Control Panel"); // Wider window for more columns
     SetTargetFPS(60);
 
     SharedConfig config;
@@ -70,10 +70,16 @@ int main() {
             config.data->streamMode = !config.data->streamMode;
         }
 
-        if (IsKeyPressed(KEY_ONE)) { config.data->colorMode = 0; config.data->colorR = 255; config.data->colorG = 40; config.data->colorB = 10; } // Normal
-        if (IsKeyPressed(KEY_TWO)) { config.data->colorMode = 1; config.data->colorR = 0; config.data->colorG = 50; config.data->colorB = 255; } // Blue
-        if (IsKeyPressed(KEY_THREE)) { config.data->colorMode = 2; config.data->colorR = 150; config.data->colorG = 20; config.data->colorB = 255; } // Purple
-        if (IsKeyPressed(KEY_FOUR)) { config.data->colorMode = 3; config.data->colorR = 255; config.data->colorG = 20; config.data->colorB = 10; } // Red
+        if (IsKeyPressed(KEY_ONE)) { 
+            config.data->innerR = 255; config.data->innerG = 255; config.data->innerB = 255;
+            config.data->midR   = 255; config.data->midG   = 150; config.data->midB   = 50;
+            config.data->outerR = 255; config.data->outerG   = 30;  config.data->outerB  = 10;
+        } // Normal
+        if (IsKeyPressed(KEY_TWO)) { 
+            config.data->innerR = 200; config.data->innerG = 255; config.data->innerB = 255;
+            config.data->midR   = 50;  config.data->midG   = 150; config.data->midB   = 255;
+            config.data->outerR = 0;   config.data->outerG   = 50;  config.data->outerB  = 255;
+        } // Blue
         // -----------------------------------
 
         BeginDrawing();
@@ -84,76 +90,104 @@ int main() {
 
         // Stream Mode Button + Hotkey Info
         Color smColor = config.data->streamMode ? GREEN : RED;
-        if (DoButton({20, 70, 150, 30}, "Stream Mode", smColor, WHITE)) {
+        if (DoButton({20.0f, 70.0f, 150.0f, 30.0f}, "Stream Mode", smColor, WHITE)) {
             config.data->streamMode = !config.data->streamMode;
         }
         DrawText(TextFormat("[S] Status: %s", config.data->streamMode ? "ON" : "OFF"), 180, 75, 16, smColor);
 
-        int startY = 120;
+        // Column 1: Core Params
+        int startY = 130;
         int spacing = 35;
+        int col1X = 20;
 
-        // 1. Fire Size
-        DrawText(TextFormat("Fire Size: %.2fx", config.data->fireSizeMultiplier), 20, startY + 5, 16, DARKGRAY);
-        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->fireSizeMultiplier = std::max(0.1f, config.data->fireSizeMultiplier - 0.1f);
-        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->fireSizeMultiplier = std::min(5.0f, config.data->fireSizeMultiplier + 0.1f);
+        DrawText("GLOBAL SETTINGS", col1X, startY - 25, 18, BLUE);
+        DrawText(TextFormat("Fire Size: %.2fx", config.data->fireSizeMultiplier), col1X, startY + 5, 16, DARKGRAY);
+        if (DoButton({(float)col1X + 220.0f, (float)startY, 30.0f, 30.0f}, "-")) config.data->fireSizeMultiplier = std::max(0.1f, config.data->fireSizeMultiplier - 0.1f);
+        if (DoButton({(float)col1X + 260.0f, (float)startY, 30.0f, 30.0f}, "+")) config.data->fireSizeMultiplier = std::min(5.0f, config.data->fireSizeMultiplier + 0.1f);
         
-        // 2. Particle Speed
         startY += spacing;
-        DrawText(TextFormat("Particle Speed: %.2fx", config.data->particleSpeedMulti), 20, startY + 5, 16, DARKGRAY);
-        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->particleSpeedMulti = std::max(0.1f, config.data->particleSpeedMulti - 0.1f);
-        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->particleSpeedMulti = std::min(5.0f, config.data->particleSpeedMulti + 0.1f);
+        DrawText(TextFormat("Particle Speed: %.2fx", config.data->particleSpeedMulti), col1X, startY + 5, 16, DARKGRAY);
+        if (DoButton({(float)col1X + 220.0f, (float)startY, 30.0f, 30.0f}, "-")) config.data->particleSpeedMulti = std::max(0.1f, config.data->particleSpeedMulti - 0.1f);
+        if (DoButton({(float)col1X + 260.0f, (float)startY, 30.0f, 30.0f}, "+")) config.data->particleSpeedMulti = std::min(5.0f, config.data->particleSpeedMulti + 0.1f);
         
-        // 3. Disappearing time (Life)
         startY += spacing;
-        DrawText(TextFormat("Disappear Time: %.2fx", config.data->particleLifeMulti), 20, startY + 5, 16, DARKGRAY);
-        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->particleLifeMulti = std::max(0.1f, config.data->particleLifeMulti - 0.1f);
-        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->particleLifeMulti = std::min(5.0f, config.data->particleLifeMulti + 0.1f);
+        DrawText(TextFormat("Disappear Time: %.2fx", config.data->particleLifeMulti), col1X, startY + 5, 16, DARKGRAY);
+        if (DoButton({(float)col1X + 220.0f, (float)startY, 30.0f, 30.0f}, "-")) config.data->particleLifeMulti = std::max(0.1f, config.data->particleLifeMulti - 0.1f);
+        if (DoButton({(float)col1X + 260.0f, (float)startY, 30.0f, 30.0f}, "+")) config.data->particleLifeMulti = std::min(5.0f, config.data->particleLifeMulti + 0.1f);
         
-        // 4. Suit Offset
         startY += spacing;
-        DrawText(TextFormat("Body Offset Y: %.1f", config.data->suitOffsetY), 20, startY + 5, 16, DARKGRAY);
-        if (DoButton({220, (float)startY, 30, 30}, "-")) config.data->suitOffsetY -= 10.0f;
-        if (DoButton({260, (float)startY, 30, 30}, "+")) config.data->suitOffsetY += 10.0f;
+        DrawText(TextFormat("Body Offset Y: %.1f", config.data->suitOffsetY), col1X, startY + 5, 16, DARKGRAY);
+        if (DoButton({(float)col1X + 220.0f, (float)startY, 30.0f, 30.0f}, "-")) config.data->suitOffsetY -= 5.0f;
+        if (DoButton({(float)col1X + 260.0f, (float)startY, 30.0f, 30.0f}, "+")) config.data->suitOffsetY += 5.0f;
 
-        // 5. RGB Sliders
         startY += 50;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->colorR, 0.0f, 255.0f, "Fire Color R", RED);
-        
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 15.0f}, &config.data->coreSizeMulti, 0.0f, 3.0f, "White Core Size", DARKGRAY);
         startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->colorG, 0.0f, 255.0f, "Fire Color G", GREEN);
-
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 15.0f}, &config.data->particleOpacity, 0.0f, 2.0f, "Particle Density (Blowout)", DARKGRAY);
         startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->colorB, 0.0f, 255.0f, "Fire Color B", BLUE);
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 15.0f}, &config.data->voiceMultiplier, 0.0f, 10.0f, "Mic Sensitivity", DARKGRAY);
+        startY += 40;
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 15.0f}, &config.data->seedShape, 1.0f, 5.0f, "Seed Shape (Middle Elongation)", MAROON);
 
-        // 6. Core Size & Particle Overlap Opacity
         startY += 50;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->coreSizeMulti, 0.0f, 3.0f, "White Core Size (Inner glowing dot)", DARKGRAY);
+        DrawText("BACKGROUND COLOR", col1X, startY - 20, 18, PURPLE);
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 10.0f}, &config.data->bgColorR, 0.0f, 255.0f, "Back R", RED);
+        startY += 30;
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 10.0f}, &config.data->bgColorG, 0.0f, 255.0f, "Back G", GREEN);
+        startY += 30;
+        DoSliderFloat({(float)col1X, (float)startY, 300.0f, 10.0f}, &config.data->bgColorB, 0.0f, 255.0f, "Back B", BLUE);
+
+        // Column 2: Color Phases
+        int col2X = 500;
+        startY = 130;
+
+        DrawText("FIRE COLOR PHASES", col2X, startY - 25, 18, RED);
         
-        startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->particleOpacity, 0.0f, 2.0f, "Particle Overlap (Controls white blowout)", DARKGRAY);
+        DrawText("INNER (Core)", col2X, startY, 16, DARKGRAY);
+        startY += 25;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->innerR, 0.0f, 255.0f, "Inner R", RED);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->innerG, 0.0f, 255.0f, "Inner G", GREEN);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->innerB, 0.0f, 255.0f, "Inner B", BLUE);
 
-        // 7. Voice Multiplier
-        startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->voiceMultiplier, 0.0f, 10.0f, "Mic Voice Reaction (Multiplier)", DARKGRAY);
-
-        // 8. Fire Phase Thresholds
         startY += 50;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->innerRatio, 0.0f, 1.0f, "Inner Core Threshold (lifeRatio)", DARKGRAY);
-        startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->midRatio, 0.0f, 1.0f, "Mid Flame Threshold (lifeRatio)", DARKGRAY);
-        startY += 40;
-        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->outerRatio, 0.0f, 1.0f, "Outer Flame Threshold (lifeRatio)", DARKGRAY);
+        DrawText("MID (Flame)", col2X, startY, 16, DARKGRAY);
+        startY += 25;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->midR, 0.0f, 255.0f, "Mid R", RED);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->midG, 0.0f, 255.0f, "Mid G", GREEN);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->midB, 0.0f, 255.0f, "Mid B", BLUE);
 
-        // Colors (Presets)
+        startY += 50;
+        DrawText("OUTER (Edges)", col2X, startY, 16, DARKGRAY);
+        startY += 25;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->outerR, 0.0f, 255.0f, "Outer R", RED);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->outerG, 0.0f, 255.0f, "Outer G", GREEN);
+        startY += 30;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->outerB, 0.0f, 255.0f, "Outer B", BLUE);
+
+        startY += 60;
+        DrawText("Thresholds (Life Ratio)", col2X, startY - 20, 18, DARKGRAY);
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->innerRatio, 0.0f, 1.0f, "Inner Threshold", DARKGRAY);
         startY += 40;
-        DrawText("Presets [1-4]:", 20, startY + 5, 16, DARKGRAY);
-        
-        if (DoButton({150, (float)startY, 70, 30}, "Normal", config.data->colorMode == 0 ? BLUE : LIGHTGRAY, config.data->colorMode == 0 ? WHITE : DARKGRAY)) { config.data->colorMode = 0; config.data->colorR = 255; config.data->colorG = 40; config.data->colorB = 10; }
-        if (DoButton({230, (float)startY, 60, 30}, "Blue", config.data->colorMode == 1 ? BLUE : LIGHTGRAY, config.data->colorMode == 1 ? WHITE : DARKGRAY)) { config.data->colorMode = 1; config.data->colorR = 0; config.data->colorG = 50; config.data->colorB = 255; }
-        if (DoButton({300, (float)startY, 60, 30}, "Purple", config.data->colorMode == 2 ? BLUE : LIGHTGRAY, config.data->colorMode == 2 ? WHITE : DARKGRAY)) { config.data->colorMode = 2; config.data->colorR = 150; config.data->colorG = 20; config.data->colorB = 255; }
-        if (DoButton({370, (float)startY, 60, 30}, "Red", config.data->colorMode == 3 ? BLUE : LIGHTGRAY, config.data->colorMode == 3 ? WHITE : DARKGRAY)) { config.data->colorMode = 3; config.data->colorR = 255; config.data->colorG = 20; config.data->colorB = 10; }
-        
-        DrawText("Ensure main VTuber window is running!", 20, 860, 12, GRAY);
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->midRatio, 0.0f, 1.0f, "Mid Threshold", DARKGRAY);
+        startY += 40;
+        DoSliderFloat({(float)col2X, (float)startY, 300.0f, 10.0f}, &config.data->outerRatio, 0.0f, 1.0f, "Outer Threshold", DARKGRAY);
+
+        DrawText("Presets:", col1X, 860, 16, DARKGRAY);
+        if (DoButton({(float)col1X + 80.0f, 850.0f, 100.0f, 30.0f}, "Normal Fire")) { 
+            config.data->innerR = 255; config.data->innerG = 255; config.data->innerB = 255;
+            config.data->midR   = 255; config.data->midG   = 150; config.data->midB   = 50;
+            config.data->outerR = 255; config.data->outerG   = 30;  config.data->outerB  = 10;
+        }
+        if (DoButton({(float)col1X + 200.0f, 850.0f, 100.0f, 30.0f}, "Blue Fire")) { 
+            config.data->innerR = 200; config.data->innerG = 255; config.data->innerB = 255;
+            config.data->midR   = 50;  config.data->midG   = 150; config.data->midB   = 255;
+            config.data->outerR = 0;   config.data->outerG   = 50;  config.data->outerB  = 255;
+        }
 
         EndDrawing();
     }
