@@ -90,6 +90,11 @@ void ParticleSystem::SetCoreSizeMulti(float multi)
     m_coreSizeMulti = multi;
 }
 
+void ParticleSystem::SetParticleOpacity(float opacity)
+{
+    m_particleOpacity = opacity;
+}
+
 void ParticleSystem::SetParticleSpeedMultiplier(float multi)
 {
     m_speedMulti = multi;
@@ -197,6 +202,9 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
         b = (unsigned char)(mainB * fade);
         a = (unsigned char)(fade * 300);
     }
+
+    // Apply master opacity multiplier to reduce blowout
+    a = (unsigned char)std::min(255.0f, a * m_particleOpacity);
 
     return {r, g, b, a};
 }

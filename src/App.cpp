@@ -137,9 +137,12 @@ void App::Update(float dt) {
 
   // Apply fire scale override and microphone volume boost
   float micVol = m_mic.GetVolume();        // 0.0 to 1.0
-  float micBoost = 1.0f + (micVol * 3.0f); // Up to 3x scale from mic
+  float micBoost = 1.0f + (micVol * m_sharedConfig.data->voiceMultiplier);
   m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti *
                            micBoost);
+
+  // Apply particle opacity
+  m_particles.SetParticleOpacity(m_sharedConfig.data->particleOpacity);
 
   // --- Update particles ---
   m_particles.Update(dt);

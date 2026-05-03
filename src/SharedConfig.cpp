@@ -23,6 +23,8 @@ bool SharedConfig::Init(bool isCreator) {
             data->colorG = 40.0f;
             data->colorB = 10.0f;
             data->coreSizeMulti = 1.0f;
+            data->voiceMultiplier = 3.0f;
+            data->particleOpacity = 1.0f;
         }
     } else {
         hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, "Local\\VTuberConfigMap");

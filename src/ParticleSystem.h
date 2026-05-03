@@ -67,6 +67,11 @@ public:
     void SetCoreSizeMulti(float multi);
 
     /**
+     * Set the master particle opacity multiplier.
+     */
+    void SetParticleOpacity(float opacity);
+
+    /**
      * Set particle speed multiplier.
      */
     void SetParticleSpeedMultiplier(float multi);
@@ -119,6 +124,7 @@ private:
     unsigned char m_customG  = 40;
     unsigned char m_customB  = 10;
     float  m_coreSizeMulti   = 1.0f;
+    float  m_particleOpacity = 1.0f;
     bool   m_isSmoke         = false;
     float  m_speedMulti      = 1.0f;
     float  m_lifeMulti       = 1.0f;

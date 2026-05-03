@@ -11,6 +11,8 @@ struct SharedConfigData {
     float colorG;
     float colorB;
     float coreSizeMulti;
+    float voiceMultiplier;
+    float particleOpacity;
 };
 
 class SharedConfig {
