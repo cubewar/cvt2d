@@ -93,6 +93,11 @@ void ParticleSystem::SetParticleLifeMultiplier(float multi)
     m_lifeMulti = multi;
 }
 
+void ParticleSystem::SetSmokeMode(bool smoke)
+{
+    m_isSmoke = smoke;
+}
+
 int ParticleSystem::FindDeadParticle()
 {
     // Search from last used position (round-robin for efficiency)
@@ -144,62 +149,54 @@ void ParticleSystem::EmitParticle()
 
 Color ParticleSystem::GetFireColor(float lifeRatio) const
 {
-    // Realistic fire gradient
     unsigned char r, g, b, a;
 
-    if (lifeRatio > 0.8f) {
-        // Inner core: bright white-yellow
-        float t = (lifeRatio - 0.8f) / 0.2f;
-        r = 255;
-        g = (unsigned char)(255 - t * 20);
-        b = (unsigned char)(200 * t);
-        a = 255;
-    } else if (lifeRatio > 0.6f) {
-        // Yellow to orange
-        float t = (lifeRatio - 0.6f) / 0.2f;
-        r = 255;
-        g = (unsigned char)(180 + t * 75);
-        b = (unsigned char)(30 * t);
-        a = 255;
-    } else if (lifeRatio > 0.3f) {
-        // Orange to red
-        float t = (lifeRatio - 0.3f) / 0.3f;
-        r = (unsigned char)(200 + t * 55);
-        g = (unsigned char)(60 + t * 120);
-        b = (unsigned char)(10 * t);
-        a = (unsigned char)(200 + t * 55);
-    } else {
-        // Red to dark, fading out
-        float t = lifeRatio / 0.3f;
-        r = (unsigned char)(80 + t * 120);
-        g = (unsigned char)(20 * t + 10);
-        b = 5;
-        a = (unsigned char)(t * 200);
+    if (m_isSmoke) {
+        // Smoke Mode: Grey/Dark, less opaque
+        float val = 40.0f + 60.0f * lifeRatio;
+        r = g = b = (unsigned char)val;
+        a = (unsigned char)(lifeRatio * 150.0f);
+        return {r, g, b, a};
     }
 
-    // Apply emotion shifts
-    float excitedShift = (m_emotionScore > 0.5f) ? (m_emotionScore - 0.5f) * 2.0f : 0.0f; // 0.0 to 1.0
-    float chillShift   = (m_emotionScore < 0.5f) ? (0.5f - m_emotionScore) * 2.0f : 0.0f; // 0.0 to 1.0
+    if (m_colorMode == 1) { 
+        // Blue Mode
+        if (lifeRatio > 0.7f)      { r = 200; g = 200; b = 255; a = 200; }
+        else if (lifeRatio > 0.4f) { r = 20;  g = 180; b = 255; a = 150; }
+        else if (lifeRatio > 0.15f){ r = 0;   g = 50;  b = 255; a = 100; }
+        else                       { r = 0;   g = 10;  b = 150; a = (unsigned char)(lifeRatio * 300); }
+    } else if (m_colorMode == 2) { 
+        // Purple Mode
+        if (lifeRatio > 0.7f)      { r = 255; g = 150; b = 255; a = 200; }
+        else if (lifeRatio > 0.4f) { r = 200; g = 20;  b = 255; a = 150; }
+        else if (lifeRatio > 0.15f){ r = 100; g = 0;   b = 150; a = 100; }
+        else                       { r = 40;  g = 0;   b = 80;  a = (unsigned char)(lifeRatio * 300); }
+    } else if (m_colorMode == 3) { 
+        // Red Mode
+        if (lifeRatio > 0.7f)      { r = 255; g = 150; b = 100; a = 200; }
+        else if (lifeRatio > 0.4f) { r = 255; g = 40;  b = 10;  a = 150; }
+        else if (lifeRatio > 0.15f){ r = 180; g = 0;   b = 0;   a = 100; }
+        else                       { r = 80;  g = 0;   b = 0;   a = (unsigned char)(lifeRatio * 300); }
+    } else {
+        // Normal (Emotion) Mode
+        // Red outer, yellow mid, white in the middle
+        if (lifeRatio > 0.7f)      { r = 255; g = 255; b = 200; a = 180; } // White/Yellow Core
+        else if (lifeRatio > 0.4f) { r = 255; g = 200; b = 20;  a = 140; } // Yellow Mid
+        else if (lifeRatio > 0.15f){ r = 255; g = 40;  b = 10;  a = 100; } // Red Outer
+        else                       { r = 150; g = 10;  b = 10;  a = (unsigned char)(lifeRatio * 300); } // Fade
 
-    if (m_colorMode == 0) {
+        // Apply emotion shifts
+        float excitedShift = (m_emotionScore > 0.5f) ? (m_emotionScore - 0.5f) * 2.0f : 0.0f; // 0.0 to 1.0
+        float chillShift   = (m_emotionScore < 0.5f) ? (0.5f - m_emotionScore) * 2.0f : 0.0f; // 0.0 to 1.0
+
         if (excitedShift > 0.0f) {
-            // Blend towards bright white/blue
             r = (unsigned char)std::min(255, r + (int)(excitedShift * 35));
             g = (unsigned char)std::min(255, g + (int)(excitedShift * 110));
             b = (unsigned char)std::min(255, b + (int)(excitedShift * 200));
         } else if (chillShift > 0.0f) {
-            // Blend towards deep red
             g = (unsigned char)std::max(0, g - (int)(chillShift * 120));
             b = (unsigned char)std::max(0, b - (int)(chillShift * 30));
         }
-    } else if (m_colorMode == 1) { // Blue
-        unsigned char oldR = r; r = b; b = oldR; // Swap Red and Blue
-        g = std::min(255, g + 50);
-    } else if (m_colorMode == 2) { // Purple
-        b = r; // Match red and blue
-    } else if (m_colorMode == 3) { // Red
-        g = (unsigned char)std::max(0, g - 120);
-        b = (unsigned char)std::max(0, b - 50);
     }
 
     return {r, g, b, a};
@@ -255,19 +252,22 @@ void ParticleSystem::Update(float dt)
 void ParticleSystem::Draw()
 {
     // Draw the core dot behind the particles, matching the base fire color
-    BeginBlendMode(BLEND_ADDITIVE);
-    float coreSize = 35.0f * m_fireScale;
-    Color coreColor = GetFireColor(0.9f); // Get the core color
-    coreColor.a = 200; // Slightly transparent glow
-    DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 10.0f, coreSize,
-                       coreColor, {coreColor.r, coreColor.g, coreColor.b, 0});
-    // Inner bright spot
-    DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 5.0f, coreSize * 0.5f,
-                       {255, 255, 255, 200}, {coreColor.r, coreColor.g, coreColor.b, 0});
-    EndBlendMode();
+    // But limit its size so it doesn't cover everything when scale is large
+    if (!m_isSmoke) {
+        BeginBlendMode(BLEND_ADDITIVE);
+        float coreSize = std::min(40.0f, 25.0f * m_fireScale);
+        Color coreColor = GetFireColor(0.9f); // Get the core color
+        coreColor.a = 200; // Slightly transparent glow
+        DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 10.0f, coreSize,
+                           coreColor, {coreColor.r, coreColor.g, coreColor.b, 0});
+        // Inner bright spot
+        DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 5.0f, coreSize * 0.5f,
+                           {255, 255, 255, 200}, {coreColor.r, coreColor.g, coreColor.b, 0});
+        EndBlendMode();
+    }
 
-    // Use Additive blending for realistic glowing fire
-    BeginBlendMode(BLEND_ADDITIVE);
+    // Use Additive blending for realistic glowing fire, Alpha for smoke
+    BeginBlendMode(m_isSmoke ? BLEND_ALPHA : BLEND_ADDITIVE);
 
     for (const auto& p : m_particles) {
         if (!p.alive) continue;

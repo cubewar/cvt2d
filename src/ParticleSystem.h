@@ -73,6 +73,11 @@ public:
     void SetParticleLifeMultiplier(float multi);
 
     /**
+     * Enable or disable smoke mode (used when no face is detected).
+     */
+    void SetSmokeMode(bool smoke);
+
+    /**
      * Set how many particles to emit per second.
      */
     void SetEmissionRate(float particlesPerSecond);
@@ -107,6 +112,7 @@ private:
     float  m_fireScale       = 1.0f;
     float  m_emotionScore    = 0.5f;
     int    m_colorMode       = 0;
+    bool   m_isSmoke         = false;
     float  m_speedMulti      = 1.0f;
     float  m_lifeMulti       = 1.0f;
     float  m_emissionRate    = 800.0f;  // particles/sec

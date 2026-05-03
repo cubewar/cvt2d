@@ -4,6 +4,7 @@
 #include "ParticleSystem.h"
 #include "FireHead.h"
 #include "SharedConfig.h"
+#include "MicInput.h"
 #include "raylib.h"
 
 /**
@@ -41,6 +42,7 @@ private:
     FaceTracker    m_faceTracker;
     ParticleSystem m_particles{3000};
     FireHead       m_fireHead;
+    MicInput       m_mic;
 
     // Camera background texture
     Texture2D      m_cameraTexture = {0};

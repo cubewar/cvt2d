@@ -26,6 +26,11 @@ void App::Init() {
   // --- IPC Control Panel ---
   m_sharedConfig.Init(true);
 
+  // Mic init
+  if (!m_mic.Start()) {
+    std::cerr << "[App] WARNING: Failed to start microphone capture." << std::endl;
+  }
+
   // --- Camera pixel buffer ---
   m_cameraPixels = new unsigned char[640 * 480 * 4]();
 
@@ -123,8 +128,12 @@ void App::Update(float dt) {
   FaceData face = m_faceTracker.GetFaceData();
   m_fireHead.Update(face, m_particles, dt);
 
-  // Apply fire scale override
-  m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti);
+  m_particles.SetSmokeMode(!face.detected);
+
+  // Apply fire scale override and microphone volume boost
+  float micVol = m_mic.GetVolume(); // 0.0 to 1.0
+  float micBoost = 1.0f + (micVol * 3.0f); // Up to 3x scale from mic
+  m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti * micBoost);
 
   // --- Update particles ---
   m_particles.Update(dt);
@@ -243,6 +252,11 @@ void App::Draw() {
 
 void App::Shutdown() {
   m_faceTracker.Stop();
+  m_mic.Stop();
+  if (m_cameraPixels) {
+    delete[] m_cameraPixels;
+    m_cameraPixels = nullptr;
+  }
   m_particles.UnloadResources();
 
   if (m_cameraTextureReady) {
