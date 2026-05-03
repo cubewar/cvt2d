@@ -72,6 +72,11 @@ public:
     void SetParticleOpacity(float opacity);
 
     /**
+     * Set the life ratio thresholds for the inner, mid, and outer fire phases.
+     */
+    void SetLifeRatios(float inner, float mid, float outer);
+
+    /**
      * Set particle speed multiplier.
      */
     void SetParticleSpeedMultiplier(float multi);
@@ -125,6 +130,9 @@ private:
     unsigned char m_customB  = 10;
     float  m_coreSizeMulti   = 1.0f;
     float  m_particleOpacity = 1.0f;
+    float  m_innerRatio      = 0.7f;
+    float  m_midRatio        = 0.4f;
+    float  m_outerRatio      = 0.15f;
     bool   m_isSmoke         = false;
     float  m_speedMulti      = 1.0f;
     float  m_lifeMulti       = 1.0f;

@@ -95,6 +95,13 @@ void ParticleSystem::SetParticleOpacity(float opacity)
     m_particleOpacity = opacity;
 }
 
+void ParticleSystem::SetLifeRatios(float inner, float mid, float outer)
+{
+    m_innerRatio = inner;
+    m_midRatio = mid;
+    m_outerRatio = outer;
+}
+
 void ParticleSystem::SetParticleSpeedMultiplier(float multi)
 {
     m_speedMulti = multi;
@@ -176,19 +183,19 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
     float mainG = m_customG;
     float mainB = m_customB;
 
-    if (lifeRatio > 0.7f) {
+    if (lifeRatio > m_innerRatio) {
         // Inner color: Main + bright offset (towards white)
         r = (unsigned char)std::min(255.0f, mainR + 200.0f);
         g = (unsigned char)std::min(255.0f, mainG + 200.0f);
         b = (unsigned char)std::min(255.0f, mainB + 200.0f);
         a = 200;
-    } else if (lifeRatio > 0.4f) {
+    } else if (lifeRatio > m_midRatio) {
         // Mid color: Main + slight offset
         r = (unsigned char)std::min(255.0f, mainR + 100.0f);
         g = (unsigned char)std::min(255.0f, mainG + 100.0f);
         b = (unsigned char)std::min(255.0f, mainB + 100.0f);
         a = 150;
-    } else if (lifeRatio > 0.15f) {
+    } else if (lifeRatio > m_outerRatio) {
         // Outer color: Pure Main Color
         r = (unsigned char)mainR;
         g = (unsigned char)mainG;
@@ -196,7 +203,7 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
         a = 100;
     } else {
         // Fade out
-        float fade = lifeRatio / 0.15f;
+        float fade = std::max(0.0f, lifeRatio / std::max(0.001f, m_outerRatio));
         r = (unsigned char)(mainR * fade);
         g = (unsigned char)(mainG * fade);
         b = (unsigned char)(mainB * fade);

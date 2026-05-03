@@ -53,7 +53,7 @@ bool DoSliderFloat(Rectangle rect, float* value, float min, float max, const cha
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_ALWAYS_RUN);
-    InitWindow(500, 750, "VTuber Control Panel");
+    InitWindow(500, 900, "VTuber Control Panel");
     SetTargetFPS(60);
 
     SharedConfig config;
@@ -136,6 +136,14 @@ int main() {
         startY += 40;
         DoSliderFloat({20, (float)startY, 300, 15}, &config.data->voiceMultiplier, 0.0f, 10.0f, "Mic Voice Reaction (Multiplier)", DARKGRAY);
 
+        // 8. Fire Phase Thresholds
+        startY += 50;
+        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->innerRatio, 0.0f, 1.0f, "Inner Core Threshold (lifeRatio)", DARKGRAY);
+        startY += 40;
+        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->midRatio, 0.0f, 1.0f, "Mid Flame Threshold (lifeRatio)", DARKGRAY);
+        startY += 40;
+        DoSliderFloat({20, (float)startY, 300, 15}, &config.data->outerRatio, 0.0f, 1.0f, "Outer Flame Threshold (lifeRatio)", DARKGRAY);
+
         // Colors (Presets)
         startY += 40;
         DrawText("Presets [1-4]:", 20, startY + 5, 16, DARKGRAY);
@@ -145,7 +153,7 @@ int main() {
         if (DoButton({300, (float)startY, 60, 30}, "Purple", config.data->colorMode == 2 ? BLUE : LIGHTGRAY, config.data->colorMode == 2 ? WHITE : DARKGRAY)) { config.data->colorMode = 2; config.data->colorR = 150; config.data->colorG = 20; config.data->colorB = 255; }
         if (DoButton({370, (float)startY, 60, 30}, "Red", config.data->colorMode == 3 ? BLUE : LIGHTGRAY, config.data->colorMode == 3 ? WHITE : DARKGRAY)) { config.data->colorMode = 3; config.data->colorR = 255; config.data->colorG = 20; config.data->colorB = 10; }
         
-        DrawText("Ensure main VTuber window is running!", 20, 710, 12, GRAY);
+        DrawText("Ensure main VTuber window is running!", 20, 860, 12, GRAY);
 
         EndDrawing();
     }

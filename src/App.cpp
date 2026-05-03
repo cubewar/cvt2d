@@ -25,6 +25,7 @@ void App::Init() {
 
   // --- IPC Control Panel ---
   m_sharedConfig.Init(true);
+  LaunchControlPanel();
 
   // Mic init
   if (!m_mic.Start()) {
@@ -141,8 +142,11 @@ void App::Update(float dt) {
   m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti *
                            micBoost);
 
-  // Apply particle opacity
+  // Apply particle opacity and life ratios
   m_particles.SetParticleOpacity(m_sharedConfig.data->particleOpacity);
+  m_particles.SetLifeRatios(m_sharedConfig.data->innerRatio, 
+                            m_sharedConfig.data->midRatio, 
+                            m_sharedConfig.data->outerRatio);
 
   // --- Update particles ---
   m_particles.Update(dt);

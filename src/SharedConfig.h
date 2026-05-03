@@ -13,6 +13,9 @@ struct SharedConfigData {
     float coreSizeMulti;
     float voiceMultiplier;
     float particleOpacity;
+    float innerRatio;
+    float midRatio;
+    float outerRatio;
 };
 
 class SharedConfig {
@@ -23,3 +26,5 @@ public:
     bool Init(bool isCreator);
     ~SharedConfig();
 };
+
+void LaunchControlPanel();

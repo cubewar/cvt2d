@@ -2,7 +2,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
+#include <shellapi.h>
 #include <iostream>
+
+#pragma comment(lib, "shell32.lib")
 
 bool SharedConfig::Init(bool isCreator) {
     if (isCreator) {
@@ -25,6 +28,9 @@ bool SharedConfig::Init(bool isCreator) {
             data->coreSizeMulti = 1.0f;
             data->voiceMultiplier = 3.0f;
             data->particleOpacity = 1.0f;
+            data->innerRatio = 0.7f;
+            data->midRatio = 0.4f;
+            data->outerRatio = 0.15f;
         }
     } else {
         hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, "Local\\VTuberConfigMap");
@@ -47,4 +53,8 @@ bool SharedConfig::Init(bool isCreator) {
 SharedConfig::~SharedConfig() {
     if (data) UnmapViewOfFile(data);
     if (hMapFile) CloseHandle(hMapFile);
+}
+
+void LaunchControlPanel() {
+    ShellExecuteA(NULL, "open", "VTuberControlPanel.exe", NULL, NULL, SW_SHOWDEFAULT);
 }
