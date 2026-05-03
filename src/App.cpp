@@ -203,11 +203,7 @@ void App::Draw() {
   BeginDrawing();
 
   // --- Background ---
-  if (m_darkMode) {
-    ClearBackground({0, 100, 0, 255}); // Dark green
-  } else {
-    ClearBackground({0, 255, 0, 255}); // Green
-  }
+  ClearBackground(BLACK); // Changed to pure black for better compositing of additive fire
 
   // --- Camera background ---
   if (m_showCamera && m_cameraTextureReady) {

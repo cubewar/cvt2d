@@ -272,11 +272,19 @@ void ParticleSystem::Draw()
         float coreSize = std::min(40.0f, 25.0f * m_fireScale) * m_coreSizeMulti;
         Color coreColor = GetFireColor(0.9f); // Get the core color
         coreColor.a = 200; // Slightly transparent glow
-        DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 10.0f, coreSize,
-                           coreColor, {coreColor.r, coreColor.g, coreColor.b, 0});
+
+        // Use glow texture instead of DrawCircleGradient to prevent geometry lines/glitches
+        Rectangle source = {0.0f, 0.0f, (float)m_glowTexture.width, (float)m_glowTexture.height};
+        
+        Rectangle destOuter = {m_emitterX, m_emitterY + 10.0f, coreSize * 4.0f, coreSize * 4.0f};
+        Vector2 originOuter = {destOuter.width/2.0f, destOuter.height/2.0f};
+        DrawTexturePro(m_glowTexture, source, destOuter, originOuter, 0.0f, coreColor);
+        
         // Inner bright spot
-        DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 5.0f, coreSize * 0.5f,
-                           {255, 255, 255, 200}, {coreColor.r, coreColor.g, coreColor.b, 0});
+        Rectangle destInner = {m_emitterX, m_emitterY + 5.0f, coreSize * 2.0f, coreSize * 2.0f};
+        Vector2 originInner = {destInner.width/2.0f, destInner.height/2.0f};
+        DrawTexturePro(m_glowTexture, source, destInner, originInner, 0.0f, {255, 255, 255, 200});
+        
         EndBlendMode();
     }
 
