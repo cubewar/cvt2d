@@ -1,158 +1,160 @@
 #pragma once
 
 #include "raylib.h"
-#include <vector>
 #include <cmath>
+#include <vector>
 
 /**
  * ParticleSystem — 2D fire particle simulation.
- * 
+ *
  * Pre-allocates a fixed pool of particles. The emitter spawns particles
  * that rise upward with turbulence, transitioning through a fire color
  * gradient (white core → yellow → orange → red → transparent) as they age.
- * 
+ *
  * Rendered with additive blending for a glowing fire effect.
  */
 
 struct Particle {
-    Vector2 position   = {0, 0};
-    Vector2 velocity   = {0, 0};
-    float   life       = 0.0f;    // Remaining life [0, maxLife]
-    float   maxLife    = 1.0f;
-    float   size       = 8.0f;    // Radius
-    float   rotation   = 0.0f;
-    float   rotSpeed   = 0.0f;
-    bool    alive      = false;
+  Vector2 position = {0, 0};
+  Vector2 velocity = {0, 0};
+  float life = 0.0f; // Remaining life [0, maxLife]
+  float maxLife = 1.0f;
+  float size = 8.0f; // Radius
+  float rotation = 0.0f;
+  float rotSpeed = 0.0f;
+  bool alive = false;
 };
 
 class ParticleSystem {
 public:
-    ParticleSystem(int maxParticles = 2000);
-    ~ParticleSystem() = default;
+  ParticleSystem(int maxParticles = 2000);
+  ~ParticleSystem() = default;
 
-    /**
-     * Load the particle glow texture (soft radial gradient).
-     * Must be called after Raylib InitWindow.
-     */
-    void LoadResources();
+  /**
+   * Load the particle glow texture (soft radial gradient).
+   * Must be called after Raylib InitWindow.
+   */
+  void LoadResources();
 
-    /**
-     * Unload textures. Call before Raylib CloseWindow.
-     */
-    void UnloadResources();
+  /**
+   * Unload textures. Call before Raylib CloseWindow.
+   */
+  void UnloadResources();
 
-    /**
-     * Set emitter position in screen coordinates.
-     */
-    void SetEmitterPosition(float x, float y);
+  /**
+   * Set emitter position in screen coordinates.
+   */
+  void SetEmitterPosition(float x, float y);
 
-    /**
-     * Set the fire scale (1.0 = normal, >1 = bigger fire = closer).
-     */
-    void SetFireScale(float scale);
+  /**
+   * Set the fire scale (1.0 = normal, >1 = bigger fire = closer).
+   */
+  void SetFireScale(float scale);
 
-    /**
-     * Set the emotion score to change the fire color (0.0 = chill, 1.0 = excited).
-     */
-    void SetEmotionScore(float score);
+  /**
+   * Set the emotion score to change the fire color (0.0 = chill, 1.0 =
+   * excited).
+   */
+  void SetEmotionScore(float score);
 
-    /**
-     * Set arbitrary RGB color for the fire particles.
-     */
-    void SetCustomColor(unsigned char r, unsigned char g, unsigned char b);
+  /**
+   * Set arbitrary RGB color for the fire particles.
+   */
+  void SetCustomColor(unsigned char r, unsigned char g, unsigned char b);
 
-    /**
-     * Set the size multiplier for the white inner core.
-     */
-    void SetCoreSizeMulti(float multi);
+  /**
+   * Set the size multiplier for the white inner core.
+   */
+  void SetCoreSizeMulti(float multi);
 
-    /**
-     * Set the master particle opacity multiplier.
-     */
-    void SetParticleOpacity(float opacity);
+  /**
+   * Set the master particle opacity multiplier.
+   */
+  void SetParticleOpacity(float opacity);
 
-    /**
-     * Set the life ratio thresholds for the inner, mid, and outer fire phases.
-     */
-    void SetLifeRatios(float inner, float mid, float outer);
+  /**
+   * Set the life ratio thresholds for the inner, mid, and outer fire phases.
+   */
+  void SetLifeRatios(float inner, float mid, float outer);
 
-    /**
-     * Set particle speed multiplier.
-     */
-    void SetParticleSpeedMultiplier(float multi);
+  /**
+   * Set particle speed multiplier.
+   */
+  void SetParticleSpeedMultiplier(float multi);
 
-    /**
-     * Set particle life (disappear time) multiplier.
-     */
-    void SetParticleLifeMultiplier(float multi);
+  /**
+   * Set particle life (disappear time) multiplier.
+   */
+  void SetParticleLifeMultiplier(float multi);
 
-    /**
-     * Enable or disable smoke mode (used when no face is detected).
-     */
-    void SetSmokeMode(bool smoke);
+  /**
+   * Enable or disable smoke mode (used when no face is detected).
+   */
+  void SetSmokeMode(bool smoke);
 
-    /**
-     * Set how many particles to emit per second.
-     */
-    void SetEmissionRate(float particlesPerSecond);
+  /**
+   * Set how many particles to emit per second.
+   */
+  void SetEmissionRate(float particlesPerSecond);
 
-    /**
-     * Update all particles (physics, lifecycle) and emit new ones.
-     * @param dt  Delta time in seconds
-     */
-    void Update(float dt);
+  /**
+   * Update all particles (physics, lifecycle) and emit new ones.
+   * @param dt  Delta time in seconds
+   */
+  void Update(float dt);
 
-    /**
-     * Draw all alive particles with additive blending.
-     */
-    void Draw();
+  /**
+   * Draw all alive particles with additive blending.
+   */
+  void Draw();
 
-    /**
-     * Get the current number of alive particles (for debug).
-     */
-    int GetAliveCount() const;
+  /**
+   * Get the current number of alive particles (for debug).
+   */
+  int GetAliveCount() const;
 
 private:
-    int  FindDeadParticle();
-    void EmitParticle();
-    Color GetFireColor(float lifeRatio) const;
+  int FindDeadParticle();
+  void EmitParticle();
+  Color GetFireColor(float lifeRatio) const;
 
-    std::vector<Particle> m_particles;
-    int    m_maxParticles;
+  std::vector<Particle> m_particles;
+  int m_maxParticles;
 
-    // Emitter state
-    float  m_emitterX        = 400.0f;
-    float  m_emitterY        = 300.0f;
-    float  m_fireScale       = 1.0f;
-    float  m_emotionScore    = 0.5f;
-    unsigned char m_customR  = 255;
-    unsigned char m_customG  = 40;
-    unsigned char m_customB  = 10;
-    float  m_coreSizeMulti   = 1.0f;
-    float  m_particleOpacity = 1.0f;
-    float  m_innerRatio      = 0.7f;
-    float  m_midRatio        = 0.4f;
-    float  m_outerRatio      = 0.15f;
-    bool   m_isSmoke         = false;
-    float  m_speedMulti      = 1.0f;
-    float  m_lifeMulti       = 1.0f;
-    float  m_emissionRate    = 800.0f;  // particles/sec
-    float  m_emissionAccum   = 0.0f;    // Fractional particle accumulator
+  // Emitter state
+  float m_emitterX = 400.0f;
+  float m_emitterY = 300.0f;
+  float m_fireScale = 1.0f;
+  float m_emotionScore = 0.5f;
+  unsigned char m_customR = 255;
+  unsigned char m_customG = 40;
+  unsigned char m_customB = 10;
+  float m_coreSizeMulti = 1.0f;
+  float m_particleOpacity = 1.0f;
+  float m_innerRatio = 0.85f;
+  float m_midRatio = 0.6f;
+  float m_outerRatio = 0.15f;
+  bool m_isSmoke = false;
+  float m_smokeBlend = 0.0f;
+  float m_speedMulti = 1.0f;
+  float m_lifeMulti = 1.0f;
+  float m_emissionRate = 800.0f; // particles/sec
+  float m_emissionAccum = 0.0f;  // Fractional particle accumulator
 
-    // Particle spawn parameters (base values, scaled by m_fireScale)
-    float  m_baseSpeedMin    = 80.0f;
-    float  m_baseSpeedMax    = 200.0f;
-    float  m_baseSizeMin     = 4.0f;
-    float  m_baseSizeMax     = 18.0f;
-    float  m_baseLifeMin     = 0.3f;
-    float  m_baseLifeMax     = 1.2f;
-    float  m_spreadAngle     = 60.0f;   // Degrees, total cone width
-    float  m_turbulence      = 120.0f;  // Horizontal sway force
+  // Particle spawn parameters (base values, scaled by m_fireScale)
+  float m_baseSpeedMin = 80.0f;
+  float m_baseSpeedMax = 200.0f;
+  float m_baseSizeMin = 4.0f;
+  float m_baseSizeMax = 18.0f;
+  float m_baseLifeMin = 0.3f;
+  float m_baseLifeMax = 1.2f;
+  float m_spreadAngle = 80.0f; // Degrees, total cone width
+  float m_turbulence = 120.0f; // Horizontal sway force
 
-    // Glow texture
-    Texture2D m_glowTexture = {0};
-    bool m_textureLoaded     = false;
+  // Glow texture
+  Texture2D m_glowTexture = {0};
+  bool m_textureLoaded = false;
 
-    // Internal index for round-robin particle search
-    int    m_lastUsedParticle = 0;
+  // Internal index for round-robin particle search
+  int m_lastUsedParticle = 0;
 };

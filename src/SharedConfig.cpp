@@ -19,7 +19,7 @@ bool SharedConfig::Init(bool isCreator) {
             data->streamMode = true; // Safe default for streamers
             data->fireSizeMultiplier = 1.0f;
             data->colorMode = 0;
-            data->suitOffsetY = 50.0f;
+            data->suitOffsetY = -30.0f;
             data->particleSpeedMulti = 1.0f;
             data->particleLifeMulti = 1.0f;
             data->colorR = 255.0f;

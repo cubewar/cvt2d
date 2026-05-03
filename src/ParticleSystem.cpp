@@ -170,15 +170,7 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
 {
     unsigned char r, g, b, a;
 
-    if (m_isSmoke) {
-        // Smoke Mode: Grey/Dark, less opaque
-        float val = 40.0f + 60.0f * lifeRatio;
-        r = g = b = (unsigned char)val;
-        a = (unsigned char)(lifeRatio * 150.0f);
-        return {r, g, b, a};
-    }
-
-    // Dynamic fire gradient based entirely on user's Main Color (m_customR/G/B)
+    // Base fire color math
     float mainR = m_customR;
     float mainG = m_customG;
     float mainB = m_customB;
@@ -213,11 +205,33 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
     // Apply master opacity multiplier to reduce blowout
     a = (unsigned char)std::min(255.0f, a * m_particleOpacity);
 
+    if (m_smokeBlend > 0.0f) {
+        // Calculate smoke color
+        float smokeVal = 40.0f + 60.0f * lifeRatio;
+        unsigned char smokeR = (unsigned char)smokeVal;
+        unsigned char smokeG = (unsigned char)smokeVal;
+        unsigned char smokeB = (unsigned char)smokeVal;
+        unsigned char smokeA = (unsigned char)(lifeRatio * 150.0f);
+
+        // Lerp between fire and smoke
+        r = (unsigned char)(r + (smokeR - r) * m_smokeBlend);
+        g = (unsigned char)(g + (smokeG - g) * m_smokeBlend);
+        b = (unsigned char)(b + (smokeB - b) * m_smokeBlend);
+        a = (unsigned char)(a + (smokeA - a) * m_smokeBlend);
+    }
+
     return {r, g, b, a};
 }
 
 void ParticleSystem::Update(float dt)
 {
+    // Smoothly transition smoke blend
+    if (m_isSmoke) {
+        m_smokeBlend = std::min(1.0f, m_smokeBlend + dt * 2.0f);
+    } else {
+        m_smokeBlend = std::max(0.0f, m_smokeBlend - dt * 2.0f);
+    }
+
     // --- Emit new particles ---
     m_emissionAccum += m_emissionRate * m_fireScale * dt;
     while (m_emissionAccum >= 1.0f) {
@@ -267,9 +281,10 @@ void ParticleSystem::Draw()
 {
     // Draw the core dot behind the particles, matching the base fire color
     // But limit its size so it doesn't cover everything when scale is large
-    if (!m_isSmoke && m_coreSizeMulti > 0.0f) {
+    float coreBlend = m_coreSizeMulti * (1.0f - m_smokeBlend);
+    if (coreBlend > 0.0f) {
         BeginBlendMode(BLEND_ADDITIVE);
-        float coreSize = std::min(40.0f, 25.0f * m_fireScale) * m_coreSizeMulti;
+        float coreSize = std::min(40.0f, 25.0f * m_fireScale) * coreBlend;
         Color coreColor = GetFireColor(0.9f); // Get the core color
         coreColor.a = 200; // Slightly transparent glow
 
