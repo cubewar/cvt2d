@@ -77,7 +77,9 @@ private:
     void CaptureLoop();
 
     cv::VideoCapture     m_capture;
-    cv::dnn::Net         m_net;
+    cv::dnn::Net         m_net;               // Face Detection (SSD)
+    cv::dnn::Net         m_landmarkNet;       // Face Landmark (ONNX)
+    bool                 m_hasLandmarkNet = false;
     
     mutable std::mutex   m_dataMutex;
     FaceData             m_faceData;

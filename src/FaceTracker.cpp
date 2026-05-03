@@ -50,8 +50,17 @@ bool FaceTracker::Init(int cameraIndex, const std::string& modelDir)
         m_net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
         m_net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
         std::cout << "[FaceTracker] DNN model loaded successfully." << std::endl;
+        
+        std::string onnxPath = modelDir + "/MediaPipeFaceLandmarkDetector.onnx";
+        if (std::filesystem::exists(onnxPath)) {
+            m_landmarkNet = cv::dnn::readNetFromONNX(onnxPath);
+            m_hasLandmarkNet = true;
+            std::cout << "[FaceTracker] MediaPipe ONNX Landmark model loaded successfully!" << std::endl;
+        } else {
+            std::cout << "[FaceTracker] No MediaPipe ONNX model found at " << onnxPath << " (Falling back to simulated emotions/3D)" << std::endl;
+        }
     } catch (const cv::Exception& e) {
-        std::cerr << "[FaceTracker] ERROR loading DNN model: " << e.what() << std::endl;
+        std::cerr << "[FaceTracker] ERROR loading models: " << e.what() << std::endl;
         return false;
     }
 
@@ -149,14 +158,53 @@ void FaceTracker::CaptureLoop()
                 bestFace.pitch    = 0.0f;
                 bestFace.yaw      = 0.0f;
                 bestFace.roll     = 0.0f;
-                
-                // Simulate some emotion for testing (oscillating between chill and excited)
-                bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
-                
                 bestFace.detected = true;
                 bestFace.frameW   = frameW;
                 bestFace.frameH   = frameH;
                 bestConfidence    = confidence;
+            }
+        }
+
+        if (bestFace.detected) {
+            if (m_hasLandmarkNet) {
+                // Use MediaPipe Face Landmark ONNX
+                int px1 = (int)(bestFace.centerX * frameW - bestFace.width * frameW * 0.8f);
+                int py1 = (int)(bestFace.centerY * frameH - bestFace.height * frameH * 0.8f);
+                int px2 = (int)(bestFace.centerX * frameW + bestFace.width * frameW * 0.8f);
+                int py2 = (int)(bestFace.centerY * frameH + bestFace.height * frameH * 0.8f);
+
+                px1 = std::max(0, std::min(frameW - 1, px1));
+                py1 = std::max(0, std::min(frameH - 1, py1));
+                px2 = std::max(0, std::min(frameW - 1, px2));
+                py2 = std::max(0, std::min(frameH - 1, py2));
+
+                if (px2 > px1 && py2 > py1) {
+                    cv::Rect roi(px1, py1, px2 - px1, py2 - py1);
+                    cv::Mat faceCrop = frame(roi);
+                    cv::Mat blobLandmark = cv::dnn::blobFromImage(faceCrop, 1.0/255.0, cv::Size(192, 192), cv::Scalar(0,0,0), true, false);
+                    m_landmarkNet.setInput(blobLandmark);
+                    
+                    std::vector<cv::Mat> outs;
+                    try {
+                        m_landmarkNet.forward(outs, m_landmarkNet.getUnconnectedOutLayersNames());
+                        if (!outs.empty() && outs[0].total() >= 1404) {
+                            float* data = (float*)outs[0].data;
+                            // Landmark 13: Upper inner lip, 14: Lower inner lip
+                            float mouthTopY = data[13 * 3 + 1];
+                            float mouthBottomY = data[14 * 3 + 1];
+                            float mouthOpen = std::abs(mouthBottomY - mouthTopY) / 192.0f; // Normalized to crop size
+                            
+                            // Map mouth open to emotion score (0.0 to 1.0)
+                            bestFace.emotionScore = std::min(1.0f, mouthOpen * 10.0f);
+                        }
+                    } catch (...) {
+                        // Forward failed, fallback
+                        bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
+                    }
+                }
+            } else {
+                // Simulate emotion for testing
+                bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
             }
         }
 

@@ -100,8 +100,10 @@ void App::Update(float dt) {
     isStreamMode = m_sharedConfig.data->streamMode;
     fireScaleMulti = m_sharedConfig.data->fireSizeMultiplier;
     m_particles.SetColorMode(m_sharedConfig.data->colorMode);
-    m_particles.SetParticleSpeedMultiplier(m_sharedConfig.data->particleSpeedMulti);
-    m_particles.SetParticleLifeMultiplier(m_sharedConfig.data->particleLifeMulti);
+    m_particles.SetParticleSpeedMultiplier(
+        m_sharedConfig.data->particleSpeedMulti);
+    m_particles.SetParticleLifeMultiplier(
+        m_sharedConfig.data->particleLifeMulti);
     suitOffsetY = m_sharedConfig.data->suitOffsetY;
   }
 
@@ -140,7 +142,8 @@ void App::Update(float dt) {
 }
 
 void App::DrawUI(bool isStreamMode) {
-  if (isStreamMode) return; // Do not draw FPS or Title in stream mode
+  if (isStreamMode)
+    return; // Do not draw FPS or Title in stream mode
 
   // Title bar
   DrawText("VTuber Fire Head", 10, 10, 24, {255, 200, 100, 200});
@@ -206,8 +209,9 @@ void App::Draw() {
     float scale = m_fireHead.GetFireScale() * 0.8f; // Scale suit with fire
     Vector2 firePos = m_fireHead.GetFirePosition();
 
-    float suitOffsetY = 50.0f;
-    if (m_sharedConfig.data) suitOffsetY = m_sharedConfig.data->suitOffsetY;
+    float suitOffsetY = 10.0f;
+    if (m_sharedConfig.data)
+      suitOffsetY = m_sharedConfig.data->suitOffsetY;
 
     Rectangle source = {0.0f, 0.0f, (float)m_suitTexture.width,
                         (float)m_suitTexture.height};
@@ -230,7 +234,8 @@ void App::Draw() {
 
   // --- UI ---
   bool isStreamMode = false;
-  if (m_sharedConfig.data) isStreamMode = m_sharedConfig.data->streamMode;
+  if (m_sharedConfig.data)
+    isStreamMode = m_sharedConfig.data->streamMode;
   DrawUI(isStreamMode);
 
   EndDrawing();
