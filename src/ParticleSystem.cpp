@@ -21,8 +21,7 @@ static Image GenerateGlowImage(int size)
             float dx = (x - center) / center;
             float dy = (y - center) / center;
             float dist = sqrtf(dx * dx + dy * dy);
-            
-            // Soft falloff: quadratic with a smooth edge
+            // Soft falloff: quadratic with a smooth edge for realistic fire glow
             float alpha = 1.0f - dist;
             alpha = std::max(0.0f, alpha);
             alpha = alpha * alpha; // Quadratic falloff for softer edges
@@ -74,6 +73,26 @@ void ParticleSystem::SetEmissionRate(float particlesPerSecond)
     m_emissionRate = particlesPerSecond;
 }
 
+void ParticleSystem::SetEmotionScore(float score)
+{
+    m_emotionScore = std::max(0.0f, std::min(1.0f, score));
+}
+
+void ParticleSystem::SetColorMode(int mode)
+{
+    m_colorMode = mode;
+}
+
+void ParticleSystem::SetParticleSpeedMultiplier(float multi)
+{
+    m_speedMulti = multi;
+}
+
+void ParticleSystem::SetParticleLifeMultiplier(float multi)
+{
+    m_lifeMulti = multi;
+}
+
 int ParticleSystem::FindDeadParticle()
 {
     // Search from last used position (round-robin for efficiency)
@@ -107,13 +126,14 @@ void ParticleSystem::EmitParticle()
     // --- Velocity: upward with spread ---
     float halfSpread = m_spreadAngle * 0.5f * DEG2RAD;
     float angle = -PI / 2.0f + RandFloat(-halfSpread, halfSpread); // -PI/2 = up
-    float speed = RandFloat(m_baseSpeedMin, m_baseSpeedMax) * m_fireScale;
+    float speed = RandFloat(m_baseSpeedMin, m_baseSpeedMax) * m_fireScale * m_speedMulti;
     p.velocity = {cosf(angle) * speed, sinf(angle) * speed};
 
     // --- Life & size ---
-    p.maxLife  = RandFloat(m_baseLifeMin, m_baseLifeMax);
+    p.maxLife  = RandFloat(m_baseLifeMin, m_baseLifeMax) * m_lifeMulti;
     p.life     = p.maxLife;
-    p.size     = RandFloat(m_baseSizeMin, m_baseSizeMax) * m_fireScale;
+    // Base size increased for anime fire style
+    p.size     = RandFloat(m_baseSizeMin * 2.5f, m_baseSizeMax * 2.5f) * m_fireScale;
 
     // --- Rotation ---
     p.rotation = RandFloat(0, 360.0f);
@@ -124,9 +144,7 @@ void ParticleSystem::EmitParticle()
 
 Color ParticleSystem::GetFireColor(float lifeRatio) const
 {
-    // lifeRatio: 1.0 = just born, 0.0 = about to die
-    // Fire gradient: white/yellow core → orange → red → dark red/transparent
-    
+    // Realistic fire gradient
     unsigned char r, g, b, a;
 
     if (lifeRatio > 0.8f) {
@@ -159,6 +177,31 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
         a = (unsigned char)(t * 200);
     }
 
+    // Apply emotion shifts
+    float excitedShift = (m_emotionScore > 0.5f) ? (m_emotionScore - 0.5f) * 2.0f : 0.0f; // 0.0 to 1.0
+    float chillShift   = (m_emotionScore < 0.5f) ? (0.5f - m_emotionScore) * 2.0f : 0.0f; // 0.0 to 1.0
+
+    if (m_colorMode == 0) {
+        if (excitedShift > 0.0f) {
+            // Blend towards bright white/blue
+            r = (unsigned char)std::min(255, r + (int)(excitedShift * 35));
+            g = (unsigned char)std::min(255, g + (int)(excitedShift * 110));
+            b = (unsigned char)std::min(255, b + (int)(excitedShift * 200));
+        } else if (chillShift > 0.0f) {
+            // Blend towards deep red
+            g = (unsigned char)std::max(0, g - (int)(chillShift * 120));
+            b = (unsigned char)std::max(0, b - (int)(chillShift * 30));
+        }
+    } else if (m_colorMode == 1) { // Blue
+        unsigned char oldR = r; r = b; b = oldR; // Swap Red and Blue
+        g = std::min(255, g + 50);
+    } else if (m_colorMode == 2) { // Purple
+        b = r; // Match red and blue
+    } else if (m_colorMode == 3) { // Red
+        g = (unsigned char)std::max(0, g - 120);
+        b = (unsigned char)std::max(0, b - 50);
+    }
+
     return {r, g, b, a};
 }
 
@@ -183,10 +226,10 @@ void ParticleSystem::Update(float dt)
         }
 
         // Gravity (negative = upward in screen coords)
-        p.velocity.y -= 50.0f * dt;
+        p.velocity.y -= 50.0f * dt * m_speedMulti;
 
         // Turbulence: sinusoidal horizontal sway
-        float turbForce = sinf(time * 5.0f + p.position.y * 0.05f) * m_turbulence;
+        float turbForce = sinf(time * 5.0f + p.position.y * 0.05f) * m_turbulence * m_speedMulti;
         p.velocity.x += turbForce * dt;
 
         // Damping
@@ -211,7 +254,19 @@ void ParticleSystem::Update(float dt)
 
 void ParticleSystem::Draw()
 {
-    // Enable additive blending for fire glow effect
+    // Draw the core dot behind the particles, matching the base fire color
+    BeginBlendMode(BLEND_ADDITIVE);
+    float coreSize = 35.0f * m_fireScale;
+    Color coreColor = GetFireColor(0.9f); // Get the core color
+    coreColor.a = 200; // Slightly transparent glow
+    DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 10.0f, coreSize,
+                       coreColor, {coreColor.r, coreColor.g, coreColor.b, 0});
+    // Inner bright spot
+    DrawCircleGradient((int)m_emitterX, (int)m_emitterY + 5.0f, coreSize * 0.5f,
+                       {255, 255, 255, 200}, {coreColor.r, coreColor.g, coreColor.b, 0});
+    EndBlendMode();
+
+    // Use Additive blending for realistic glowing fire
     BeginBlendMode(BLEND_ADDITIVE);
 
     for (const auto& p : m_particles) {
@@ -233,16 +288,6 @@ void ParticleSystem::Draw()
         }
     }
 
-    EndBlendMode();
-
-    // Draw a bright inner core at the emitter position for extra glow
-    BeginBlendMode(BLEND_ADDITIVE);
-    float coreSize = 20.0f * m_fireScale;
-    DrawCircleGradient((int)m_emitterX, (int)m_emitterY, coreSize,
-                       {255, 255, 220, 180}, {255, 200, 50, 0});
-    // Second, smaller, brighter core
-    DrawCircleGradient((int)m_emitterX, (int)m_emitterY, coreSize * 0.5f,
-                       {255, 255, 255, 200}, {255, 255, 180, 0});
     EndBlendMode();
 }
 

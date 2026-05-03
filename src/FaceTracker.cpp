@@ -143,6 +143,16 @@ void FaceTracker::CaptureLoop()
                 bestFace.centerY  = (y1 + y2) / 2.0f;
                 bestFace.width    = x2 - x1;
                 bestFace.height   = y2 - y1;
+                
+                // Fallback 3D & Emotion data (Since OpenCV SSD is 2D only)
+                bestFace.centerZ  = bestFace.width; // Depth proxy
+                bestFace.pitch    = 0.0f;
+                bestFace.yaw      = 0.0f;
+                bestFace.roll     = 0.0f;
+                
+                // Simulate some emotion for testing (oscillating between chill and excited)
+                bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
+                
                 bestFace.detected = true;
                 bestFace.frameW   = frameW;
                 bestFace.frameH   = frameH;

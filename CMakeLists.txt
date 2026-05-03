@@ -22,6 +22,7 @@ message(STATUS "OpenCV include dirs: ${OpenCV_INCLUDE_DIRS}")
 
 # ----- Sources -----
 file(GLOB_RECURSE SOURCES "src/*.cpp")
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/ControlPanel.cpp")
 
 # ----- Executable -----
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -37,6 +38,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     raylib
     ${OpenCV_LIBS}
 )
+
+# ----- Control Panel Executable -----
+add_executable(VTuberControlPanel src/ControlPanel.cpp src/SharedConfig.cpp)
+target_link_libraries(VTuberControlPanel PRIVATE raylib)
 
 # ----- Copy OpenCV DLLs to output on Windows -----
 if(WIN32)

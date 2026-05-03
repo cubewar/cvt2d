@@ -3,6 +3,7 @@
 #include "FaceTracker.h"
 #include "ParticleSystem.h"
 #include "FireHead.h"
+#include "SharedConfig.h"
 #include "raylib.h"
 
 /**
@@ -29,7 +30,7 @@ private:
     void Shutdown();
 
     void UpdateCameraTexture();
-    void DrawUI();
+    void DrawUI(bool isStreamMode);
 
     // Window settings
     static constexpr int SCREEN_WIDTH  = 800;
@@ -52,5 +53,14 @@ private:
     bool m_showDebug    = false;
     bool m_showCamera   = true;
     bool m_darkMode     = false;
+    bool m_drawMesh     = false;
     float m_cameraAlpha = 0.4f; // Camera background transparency
+
+    // Suit state
+    Texture2D m_suitTexture = {0};
+    float m_suitSwayAngle   = 0.0f;
+    float m_lastFaceX       = 0.5f;
+
+    // IPC
+    SharedConfig m_sharedConfig;
 };

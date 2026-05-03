@@ -17,10 +17,15 @@
  * The face size acts as a depth proxy: closer = bigger face = bigger fire.
  */
 struct FaceData {
-    float centerX   = 0.0f;  // Normalized [0, 1] — face center X in camera frame
-    float centerY   = 0.0f;  // Normalized [0, 1] — face center Y in camera frame
+    float centerX   = 0.0f;  // Normalized [0, 1] — face center X
+    float centerY   = 0.0f;  // Normalized [0, 1] — face center Y
+    float centerZ   = 0.0f;  // Z-depth proxy
     float width     = 0.0f;  // Normalized [0, 1] — face bounding box width
     float height    = 0.0f;  // Normalized [0, 1] — face bounding box height
+    float pitch     = 0.0f;  // Head rotation angle X
+    float yaw       = 0.0f;  // Head rotation angle Y
+    float roll      = 0.0f;  // Head rotation angle Z
+    float emotionScore = 0.5f; // 0.0 = Chill, 1.0 = Excited
     bool  detected  = false;
     int   frameW    = 640;   // Camera frame width in pixels
     int   frameH    = 480;   // Camera frame height in pixels

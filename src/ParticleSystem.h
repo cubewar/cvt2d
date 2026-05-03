@@ -52,6 +52,27 @@ public:
     void SetFireScale(float scale);
 
     /**
+     * Set the emotion score to change the fire color (0.0 = chill, 1.0 = excited).
+     */
+    void SetEmotionScore(float score);
+
+    /**
+     * Set manual color override mode.
+     * 0: Normal(Emotion), 1: Blue, 2: Purple, 3: Red
+     */
+    void SetColorMode(int mode);
+
+    /**
+     * Set particle speed multiplier.
+     */
+    void SetParticleSpeedMultiplier(float multi);
+
+    /**
+     * Set particle life (disappear time) multiplier.
+     */
+    void SetParticleLifeMultiplier(float multi);
+
+    /**
      * Set how many particles to emit per second.
      */
     void SetEmissionRate(float particlesPerSecond);
@@ -84,6 +105,10 @@ private:
     float  m_emitterX        = 400.0f;
     float  m_emitterY        = 300.0f;
     float  m_fireScale       = 1.0f;
+    float  m_emotionScore    = 0.5f;
+    int    m_colorMode       = 0;
+    float  m_speedMulti      = 1.0f;
+    float  m_lifeMulti       = 1.0f;
     float  m_emissionRate    = 800.0f;  // particles/sec
     float  m_emissionAccum   = 0.0f;    // Fractional particle accumulator
 

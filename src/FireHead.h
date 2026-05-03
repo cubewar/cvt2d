@@ -31,7 +31,7 @@ public:
     /**
      * Draw any debug overlay (face bounding box, etc.)
      */
-    void DrawDebug(const FaceData& faceData);
+    void DrawDebug(const FaceData& faceData, bool drawMesh = false);
 
     /**
      * Get the smoothed fire position in screen coordinates.
