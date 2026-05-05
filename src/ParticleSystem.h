@@ -121,7 +121,7 @@ public:
 private:
   int FindDeadParticle();
   void EmitParticle();
-  Color GetFireColor(float lifeRatio) const;
+  Color GetFireColor(float distRatio, float lifeRatio) const;
 
   std::vector<Particle> m_particles;
   int m_maxParticles;

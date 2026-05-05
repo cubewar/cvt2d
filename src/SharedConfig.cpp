@@ -28,8 +28,9 @@ bool SharedConfig::Init(bool isCreator) {
             data->coreSizeMulti = 1.0f;
             data->voiceMultiplier = 3.0f;
             data->particleOpacity = 0.85f;
-            data->innerRatio = 0.75f;
-            data->midRatio = 0.40f;
+            // Spatial thresholds: distRatio 0..innerRatio = core, innerRatio..midRatio = mid, beyond = outer
+            data->innerRatio = 0.20f;
+            data->midRatio = 0.55f;
             data->outerRatio = 0.12f;
             // Phase colors — vibrant classic fire
             data->innerR = 255.0f; data->innerG = 240.0f; data->innerB = 180.0f;  // Warm white-yellow

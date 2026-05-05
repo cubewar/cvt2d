@@ -191,65 +191,72 @@ void ParticleSystem::EmitParticle()
     p.alive = true;
 }
 
-Color ParticleSystem::GetFireColor(float lifeRatio) const
+Color ParticleSystem::GetFireColor(float distRatio, float lifeRatio) const
 {
-    // Smooth gradient through fire phases:
-    //   lifeRatio 1.0 → 0.8  =  White/Yellow core (inner)
-    //   lifeRatio 0.8 → 0.4  =  Yellow → Orange (mid)
-    //   lifeRatio 0.4 → 0.1  =  Orange → Red (outer)
-    //   lifeRatio 0.1 → 0.0  =  Red → transparent (fade out)
+    // distRatio: 0.0 = at emitter center, 1.0 = at max fire reach
+    //   This drives COLOR so all particles at the same height share the same hue.
+    // lifeRatio: 0.0 = about to die, 1.0 = just born
+    //   This drives OPACITY only (fade out as particles age).
 
-    unsigned char r, g, b, a;
+    unsigned char r, g, b;
+    float baseAlpha;
 
-    if (lifeRatio > m_innerRatio) {
-        // Inner zone — blend from mid color to inner color
-        float t = (lifeRatio - m_innerRatio) / std::max(0.001f, 1.0f - m_innerRatio);
-        r = LerpByte(m_midR, m_innerR, t);
-        g = LerpByte(m_midG, m_innerG, t);
-        b = LerpByte(m_midB, m_innerB, t);
-        a = (unsigned char)SmoothLerp(200.0f, 220.0f, t);
-    } else if (lifeRatio > m_midRatio) {
-        // Mid zone — blend from outer to mid
-        float t = (lifeRatio - m_midRatio) / std::max(0.001f, m_innerRatio - m_midRatio);
-        r = LerpByte(m_outerR, m_midR, t);
-        g = LerpByte(m_outerG, m_midG, t);
-        b = LerpByte(m_outerB, m_midB, t);
-        a = (unsigned char)SmoothLerp(160.0f, 200.0f, t);
-    } else if (lifeRatio > m_outerRatio) {
-        // Outer zone — pure outer color fading in opacity
-        float t = (lifeRatio - m_outerRatio) / std::max(0.001f, m_midRatio - m_outerRatio);
-        r = m_outerR;
-        g = m_outerG;
-        b = m_outerB;
-        a = (unsigned char)SmoothLerp(40.0f, 160.0f, t);
+    // --- Color from spatial distance (seamless gradient) ---
+    // Use smoothstep-style thresholds based on distance from center
+    float innerEdge = m_innerRatio;   // e.g. 0.25 — within this = inner color
+    float midEdge   = m_midRatio;     // e.g. 0.55 — within this = mid color zone
+    // Beyond midEdge = outer color, fading to transparent
+
+    if (distRatio < innerEdge) {
+        // Core zone: blend inner → mid as we move outward
+        float t = distRatio / std::max(0.001f, innerEdge);
+        r = LerpByte(m_innerR, m_midR, t);
+        g = LerpByte(m_innerG, m_midG, t);
+        b = LerpByte(m_innerB, m_midB, t);
+        baseAlpha = SmoothLerp(220.0f, 200.0f, t);
+    } else if (distRatio < midEdge) {
+        // Mid zone: blend mid → outer
+        float t = (distRatio - innerEdge) / std::max(0.001f, midEdge - innerEdge);
+        r = LerpByte(m_midR, m_outerR, t);
+        g = LerpByte(m_midG, m_outerG, t);
+        b = LerpByte(m_midB, m_outerB, t);
+        baseAlpha = SmoothLerp(200.0f, 140.0f, t);
     } else {
-        // Fade out to transparent
-        float fade = std::max(0.0f, lifeRatio / std::max(0.001f, m_outerRatio));
+        // Outer zone: pure outer color, fading out
+        float t = (distRatio - midEdge) / std::max(0.001f, 1.0f - midEdge);
+        t = std::min(1.0f, t);
         r = m_outerR;
         g = m_outerG;
         b = m_outerB;
-        a = (unsigned char)(fade * 40.0f);
+        baseAlpha = SmoothLerp(140.0f, 0.0f, t);
     }
 
+    // --- Alpha from lifetime (fade out dying particles) ---
+    float lifeFade = 1.0f;
+    if (lifeRatio < 0.3f) {
+        lifeFade = lifeRatio / 0.3f; // Smooth fade in last 30% of life
+    }
+    float a = baseAlpha * lifeFade;
+
     // Apply master opacity
-    a = (unsigned char)std::min(255.0f, a * m_particleOpacity);
+    a = std::min(255.0f, a * m_particleOpacity);
+
+    unsigned char finalA = (unsigned char)std::max(0.0f, a);
 
     if (m_smokeBlend > 0.0f) {
-        // Calculate smoke color
         float smokeVal = 40.0f + 60.0f * lifeRatio;
         unsigned char smokeR = (unsigned char)smokeVal;
         unsigned char smokeG = (unsigned char)smokeVal;
         unsigned char smokeB = (unsigned char)smokeVal;
         unsigned char smokeA = (unsigned char)(lifeRatio * 120.0f);
 
-        // Lerp between fire and smoke
         r = LerpByte(r, smokeR, m_smokeBlend);
         g = LerpByte(g, smokeG, m_smokeBlend);
         b = LerpByte(b, smokeB, m_smokeBlend);
-        a = LerpByte(a, smokeA, m_smokeBlend);
+        finalA = LerpByte(finalA, smokeA, m_smokeBlend);
     }
 
-    return {r, g, b, a};
+    return {r, g, b, finalA};
 }
 
 void ParticleSystem::Update(float dt)
@@ -317,8 +324,8 @@ void ParticleSystem::Draw()
         
         Rectangle source = {0.0f, 0.0f, (float)m_glowTexture.width, (float)m_glowTexture.height};
         
-        // Warm glow matching the inner phase color
-        Color coreColor = {m_innerR, m_innerG, m_innerB, (unsigned char)(180 * m_particleOpacity)};
+        // Warm glow matching the inner phase color (distRatio=0 = center)
+        Color coreColor = {m_innerR, m_innerG, m_innerB, (unsigned char)(180.0f * m_particleOpacity)};
         Rectangle destOuter = {m_emitterX, m_emitterY + 8.0f, coreSize * 3.0f, coreSize * 3.0f};
         Vector2 originOuter = {destOuter.width/2.0f, destOuter.height/2.0f};
         DrawTexturePro(m_glowTexture, source, destOuter, originOuter, 0.0f, coreColor);
@@ -333,26 +340,34 @@ void ParticleSystem::Draw()
     }
 
     // --- Particles: Use ALPHA blending to prevent white blowout ---
-    // This is the key change: BLEND_ALPHA composites each particle
-    // over the previous without adding light values together, 
-    // so stacked red particles stay red instead of turning white.
+    // Color is driven by DISTANCE from emitter (spatial gradient),
+    // so all particles at the same height share the same color = seamless.
     BeginBlendMode(BLEND_ALPHA);
+
+    // Estimate the fire's maximum reach for normalizing distance.
+    // Based on average speed * average life * scale, this gives a stable reference.
+    float maxReach = (m_baseSpeedMax * 0.7f) * (m_baseLifeMax * m_lifeMulti * m_seedShapeMulti) * m_fireScale;
+    maxReach = std::max(50.0f, maxReach); // Safety floor
 
     for (const auto& p : m_particles) {
         if (!p.alive) continue;
 
+        // Distance from emitter center (primarily vertical, slight horizontal)
+        float dx = p.position.x - m_emitterX;
+        float dy = p.position.y - m_emitterY;
+        float dist = sqrtf(dx * dx + dy * dy);
+        float distRatio = std::min(1.0f, dist / maxReach);
+
         float lifeRatio = p.life / p.maxLife;
-        Color col = GetFireColor(lifeRatio);
+        Color col = GetFireColor(distRatio, lifeRatio);
 
         if (m_textureLoaded) {
-            // Draw textured particle with the glow sprite
             float drawSize = p.size * 2.0f;
             Rectangle src  = {0, 0, (float)m_glowTexture.width, (float)m_glowTexture.height};
             Rectangle dst  = {p.position.x, p.position.y, drawSize, drawSize};
             Vector2 origin = {drawSize / 2.0f, drawSize / 2.0f};
             DrawTexturePro(m_glowTexture, src, dst, origin, p.rotation, col);
         } else {
-            // Fallback: simple circle
             DrawCircleV(p.position, p.size, col);
         }
     }
