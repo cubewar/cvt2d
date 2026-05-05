@@ -27,17 +27,17 @@ bool SharedConfig::Init(bool isCreator) {
             data->colorB = 10.0f;
             data->coreSizeMulti = 1.0f;
             data->voiceMultiplier = 3.0f;
-            data->particleOpacity = 1.0f;
-            data->innerRatio = 0.85f;
-            data->midRatio = 0.5f;
-            data->outerRatio = 0.15f;
-            // Phase colors (Red fire default)
-            data->innerR = 255.0f; data->innerG = 255.0f; data->innerB = 255.0f;
-            data->midR   = 255.0f; data->midG   = 150.0f; data->midB   = 50.0f;
-            data->outerR = 255.0f; data->outerG   = 30.0f;  data->outerB  = 10.0f;
+            data->particleOpacity = 0.85f;
+            data->innerRatio = 0.75f;
+            data->midRatio = 0.40f;
+            data->outerRatio = 0.12f;
+            // Phase colors — vibrant classic fire
+            data->innerR = 255.0f; data->innerG = 240.0f; data->innerB = 180.0f;  // Warm white-yellow
+            data->midR   = 255.0f; data->midG   = 140.0f; data->midB   = 20.0f;   // Orange
+            data->outerR = 220.0f; data->outerG =  30.0f;  data->outerB = 5.0f;   // Deep red
             // Background
             data->bgColorR = 0.0f; data->bgColorG = 0.0f; data->bgColorB = 0.0f;
-            data->seedShape = 1.5f;
+            data->seedShape = 2.5f;
         }
     } else {
         hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, "Local\\VTuberConfigMap");

@@ -71,14 +71,14 @@ int main() {
         }
 
         if (IsKeyPressed(KEY_ONE)) { 
-            config.data->innerR = 255; config.data->innerG = 255; config.data->innerB = 255;
-            config.data->midR   = 255; config.data->midG   = 150; config.data->midB   = 50;
-            config.data->outerR = 255; config.data->outerG   = 30;  config.data->outerB  = 10;
+            config.data->innerR = 255; config.data->innerG = 240; config.data->innerB = 180;
+            config.data->midR   = 255; config.data->midG   = 140; config.data->midB   = 20;
+            config.data->outerR = 220; config.data->outerG   = 30;  config.data->outerB  = 5;
         } // Normal
         if (IsKeyPressed(KEY_TWO)) { 
-            config.data->innerR = 200; config.data->innerG = 255; config.data->innerB = 255;
-            config.data->midR   = 50;  config.data->midG   = 150; config.data->midB   = 255;
-            config.data->outerR = 0;   config.data->outerG   = 50;  config.data->outerB  = 255;
+            config.data->innerR = 200; config.data->innerG = 240; config.data->innerB = 255;
+            config.data->midR   = 50;  config.data->midG   = 130; config.data->midB   = 255;
+            config.data->outerR = 10;  config.data->outerG   = 40;  config.data->outerB  = 200;
         } // Blue
         // -----------------------------------
 
@@ -179,14 +179,14 @@ int main() {
 
         DrawText("Presets:", col1X, 860, 16, DARKGRAY);
         if (DoButton({(float)col1X + 80.0f, 850.0f, 100.0f, 30.0f}, "Normal Fire")) { 
-            config.data->innerR = 255; config.data->innerG = 255; config.data->innerB = 255;
-            config.data->midR   = 255; config.data->midG   = 150; config.data->midB   = 50;
-            config.data->outerR = 255; config.data->outerG   = 30;  config.data->outerB  = 10;
+            config.data->innerR = 255; config.data->innerG = 240; config.data->innerB = 180;
+            config.data->midR   = 255; config.data->midG   = 140; config.data->midB   = 20;
+            config.data->outerR = 220; config.data->outerG   = 30;  config.data->outerB  = 5;
         }
         if (DoButton({(float)col1X + 200.0f, 850.0f, 100.0f, 30.0f}, "Blue Fire")) { 
-            config.data->innerR = 200; config.data->innerG = 255; config.data->innerB = 255;
-            config.data->midR   = 50;  config.data->midG   = 150; config.data->midB   = 255;
-            config.data->outerR = 0;   config.data->outerG   = 50;  config.data->outerB  = 255;
+            config.data->innerR = 200; config.data->innerG = 240; config.data->innerB = 255;
+            config.data->midR   = 50;  config.data->midG   = 130; config.data->midB   = 255;
+            config.data->outerR = 10;  config.data->outerG   = 40;  config.data->outerB  = 200;
         }
 
         EndDrawing();

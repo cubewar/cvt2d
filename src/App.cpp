@@ -58,7 +58,7 @@ void App::Init() {
 }
 
 void App::UpdateCameraTexture() {
-  if (!m_faceTracker.IsRunning())
+  if (!m_faceTracker.IsRunning() || !m_showCamera)
     return;
 
   int w, h;

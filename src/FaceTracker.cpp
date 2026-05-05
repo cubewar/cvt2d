@@ -227,5 +227,10 @@ void FaceTracker::CaptureLoop()
             m_faceData = bestFace;
             m_latestFrameRGBA = rgba.clone();
         }
+
+        // --- Efficient sleeping ---
+        // 24 FPS target is ~41ms per frame. 
+        // Inference + processing might take 5-15ms, so sleeping 30ms is safe and significantly saves CPU.
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 }

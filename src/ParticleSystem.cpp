@@ -9,6 +9,16 @@ static float RandFloat(float min, float max) {
     return min + (float)rand() / (float)RAND_MAX * (max - min);
 }
 
+// Smooth interpolation helper
+static float SmoothLerp(float a, float b, float t) {
+    t = std::max(0.0f, std::min(1.0f, t));
+    return a + (b - a) * t;
+}
+
+static unsigned char LerpByte(unsigned char a, unsigned char b, float t) {
+    return (unsigned char)(a + (int)(b - a) * std::max(0.0f, std::min(1.0f, t)));
+}
+
 // --- Generate a soft radial gradient texture for particles ---
 static Image GenerateGlowImage(int size)
 {
@@ -147,65 +157,81 @@ void ParticleSystem::EmitParticle()
     int idx = FindDeadParticle();
     Particle& p = m_particles[idx];
 
-    // --- Position: slight random offset from emitter center ---
-    float offsetX = RandFloat(-12.0f, 12.0f) * m_fireScale;
-    float offsetY = RandFloat(-6.0f, 6.0f) * m_fireScale;
-    p.position = {m_emitterX + offsetX, m_emitterY + offsetY};
-
     // --- Velocity: upward with spread ---
     float halfSpread = m_spreadAngle * 0.5f * DEG2RAD;
     float angle = -PI / 2.0f + RandFloat(-halfSpread, halfSpread); // -PI/2 = up
     float speed = RandFloat(m_baseSpeedMin, m_baseSpeedMax) * m_fireScale * m_speedMulti;
     p.velocity = {cosf(angle) * speed, sinf(angle) * speed};
 
+    // --- Seed shape: particles near the center (straight up) live longer ---
+    // angle is centered at -PI/2 (straight up). 
+    // deviation = how far from straight up this particle goes (0 = center, 1 = edge)
+    float deviation = fabsf(angle - (-PI / 2.0f)) / halfSpread; // 0..1
+    deviation = std::min(1.0f, deviation);
+    // Center particles (deviation≈0) get the LONGEST life, edge particles (deviation≈1) get shorter
+    float lifeScale = SmoothLerp(m_seedShapeMulti, 0.5f, deviation);
+
+    // --- Position: slight offset, narrower for center particles ---
+    float offsetRange = 12.0f * m_fireScale * (0.3f + 0.7f * deviation); // center = tight, edges = spread
+    float offsetX = RandFloat(-offsetRange, offsetRange);
+    float offsetY = RandFloat(-4.0f, 4.0f) * m_fireScale;
+    p.position = {m_emitterX + offsetX, m_emitterY + offsetY};
+
     // --- Life & size ---
-    float distFromCenter = fabsf(cosf(angle)); // Higher value means more "upwards" / central in the cone
-    float lifeScale = 1.0f + (distFromCenter * (m_seedShapeMulti - 1.0f));
-    
     p.maxLife  = RandFloat(m_baseLifeMin, m_baseLifeMax) * m_lifeMulti * lifeScale;
     p.life     = p.maxLife;
-    // Base size increased for anime fire style
-    p.size     = RandFloat(m_baseSizeMin * 2.5f, m_baseSizeMax * 2.5f) * m_fireScale;
+    // Size: center particles slightly smaller for a tighter core
+    float sizeScale = SmoothLerp(1.8f, 2.8f, deviation);
+    p.size     = RandFloat(m_baseSizeMin, m_baseSizeMax) * sizeScale * m_fireScale;
 
     // --- Rotation ---
     p.rotation = RandFloat(0, 360.0f);
-    p.rotSpeed = RandFloat(-180.0f, 180.0f);
+    p.rotSpeed = RandFloat(-90.0f, 90.0f); // Slower rotation for less visual noise
 
     p.alive = true;
 }
 
 Color ParticleSystem::GetFireColor(float lifeRatio) const
 {
+    // Smooth gradient through fire phases:
+    //   lifeRatio 1.0 → 0.8  =  White/Yellow core (inner)
+    //   lifeRatio 0.8 → 0.4  =  Yellow → Orange (mid)
+    //   lifeRatio 0.4 → 0.1  =  Orange → Red (outer)
+    //   lifeRatio 0.1 → 0.0  =  Red → transparent (fade out)
+
     unsigned char r, g, b, a;
 
     if (lifeRatio > m_innerRatio) {
-        // Inner color
-        r = m_innerR;
-        g = m_innerG;
-        b = m_innerB;
-        a = 200;
+        // Inner zone — blend from mid color to inner color
+        float t = (lifeRatio - m_innerRatio) / std::max(0.001f, 1.0f - m_innerRatio);
+        r = LerpByte(m_midR, m_innerR, t);
+        g = LerpByte(m_midG, m_innerG, t);
+        b = LerpByte(m_midB, m_innerB, t);
+        a = (unsigned char)SmoothLerp(200.0f, 220.0f, t);
     } else if (lifeRatio > m_midRatio) {
-        // Mid color
-        r = m_midR;
-        g = m_midG;
-        b = m_midB;
-        a = 150;
+        // Mid zone — blend from outer to mid
+        float t = (lifeRatio - m_midRatio) / std::max(0.001f, m_innerRatio - m_midRatio);
+        r = LerpByte(m_outerR, m_midR, t);
+        g = LerpByte(m_outerG, m_midG, t);
+        b = LerpByte(m_outerB, m_midB, t);
+        a = (unsigned char)SmoothLerp(160.0f, 200.0f, t);
     } else if (lifeRatio > m_outerRatio) {
-        // Outer color
+        // Outer zone — pure outer color fading in opacity
+        float t = (lifeRatio - m_outerRatio) / std::max(0.001f, m_midRatio - m_outerRatio);
         r = m_outerR;
         g = m_outerG;
         b = m_outerB;
-        a = 100;
+        a = (unsigned char)SmoothLerp(40.0f, 160.0f, t);
     } else {
-        // Fade out
+        // Fade out to transparent
         float fade = std::max(0.0f, lifeRatio / std::max(0.001f, m_outerRatio));
-        r = (unsigned char)(m_outerR * fade);
-        g = (unsigned char)(m_outerG * fade);
-        b = (unsigned char)(m_outerB * fade);
-        a = (unsigned char)(fade * 300);
+        r = m_outerR;
+        g = m_outerG;
+        b = m_outerB;
+        a = (unsigned char)(fade * 40.0f);
     }
 
-    // Apply master opacity multiplier to reduce blowout
+    // Apply master opacity
     a = (unsigned char)std::min(255.0f, a * m_particleOpacity);
 
     if (m_smokeBlend > 0.0f) {
@@ -214,13 +240,13 @@ Color ParticleSystem::GetFireColor(float lifeRatio) const
         unsigned char smokeR = (unsigned char)smokeVal;
         unsigned char smokeG = (unsigned char)smokeVal;
         unsigned char smokeB = (unsigned char)smokeVal;
-        unsigned char smokeA = (unsigned char)(lifeRatio * 150.0f);
+        unsigned char smokeA = (unsigned char)(lifeRatio * 120.0f);
 
         // Lerp between fire and smoke
-        r = (unsigned char)(r + (smokeR - r) * m_smokeBlend);
-        g = (unsigned char)(g + (smokeG - g) * m_smokeBlend);
-        b = (unsigned char)(b + (smokeB - b) * m_smokeBlend);
-        a = (unsigned char)(a + (smokeA - a) * m_smokeBlend);
+        r = LerpByte(r, smokeR, m_smokeBlend);
+        g = LerpByte(g, smokeG, m_smokeBlend);
+        b = LerpByte(b, smokeB, m_smokeBlend);
+        a = LerpByte(a, smokeA, m_smokeBlend);
     }
 
     return {r, g, b, a};
@@ -282,32 +308,35 @@ void ParticleSystem::Update(float dt)
 
 void ParticleSystem::Draw()
 {
-    // Draw the core dot behind the particles, matching the base fire color
-    // But limit its size so it doesn't cover everything when scale is large
+    // --- Core glow (small white-ish center) ---
     float coreBlend = m_coreSizeMulti * (1.0f - m_smokeBlend);
-    if (coreBlend > 0.0f) {
-        BeginBlendMode(BLEND_ADDITIVE);
-        float coreSize = std::min(40.0f, 25.0f * m_fireScale) * coreBlend;
-        Color coreColor = GetFireColor(0.9f); // Get the core color
-        coreColor.a = 200; // Slightly transparent glow
-
-        // Use glow texture instead of DrawCircleGradient to prevent geometry lines/glitches
+    if (coreBlend > 0.0f && m_textureLoaded) {
+        // Draw the core with ALPHA blending so it doesn't blow out
+        BeginBlendMode(BLEND_ALPHA);
+        float coreSize = std::min(30.0f, 18.0f * m_fireScale) * coreBlend;
+        
         Rectangle source = {0.0f, 0.0f, (float)m_glowTexture.width, (float)m_glowTexture.height};
         
-        Rectangle destOuter = {m_emitterX, m_emitterY + 10.0f, coreSize * 4.0f, coreSize * 4.0f};
+        // Warm glow matching the inner phase color
+        Color coreColor = {m_innerR, m_innerG, m_innerB, (unsigned char)(180 * m_particleOpacity)};
+        Rectangle destOuter = {m_emitterX, m_emitterY + 8.0f, coreSize * 3.0f, coreSize * 3.0f};
         Vector2 originOuter = {destOuter.width/2.0f, destOuter.height/2.0f};
         DrawTexturePro(m_glowTexture, source, destOuter, originOuter, 0.0f, coreColor);
         
-        // Inner bright spot
-        Rectangle destInner = {m_emitterX, m_emitterY + 5.0f, coreSize * 2.0f, coreSize * 2.0f};
+        // Small bright center spot
+        Color brightCore = {m_innerR, m_innerG, m_innerB, (unsigned char)(220 * m_particleOpacity)};
+        Rectangle destInner = {m_emitterX, m_emitterY + 4.0f, coreSize * 1.5f, coreSize * 1.5f};
         Vector2 originInner = {destInner.width/2.0f, destInner.height/2.0f};
-        DrawTexturePro(m_glowTexture, source, destInner, originInner, 0.0f, {255, 255, 255, 200});
+        DrawTexturePro(m_glowTexture, source, destInner, originInner, 0.0f, brightCore);
         
         EndBlendMode();
     }
 
-    // Use Additive blending for realistic glowing fire, Alpha for smoke
-    BeginBlendMode(m_isSmoke ? BLEND_ALPHA : BLEND_ADDITIVE);
+    // --- Particles: Use ALPHA blending to prevent white blowout ---
+    // This is the key change: BLEND_ALPHA composites each particle
+    // over the previous without adding light values together, 
+    // so stacked red particles stay red instead of turning white.
+    BeginBlendMode(BLEND_ALPHA);
 
     for (const auto& p : m_particles) {
         if (!p.alive) continue;
