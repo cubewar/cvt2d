@@ -166,20 +166,15 @@ void App::Update(float dt) {
     unsigned char eOuterR, eOuterG, eOuterB;
 
     switch (m_currentEmotion) {
-      case Emotion::SURPRISED: // Purple
-        eInnerR = 230; eInnerG = 190; eInnerB = 255;
-        eMidR   = 160; eMidG   =  60; eMidB   = 255;
-        eOuterR = 100; eOuterG =  20; eOuterB = 200;
-        break;
-      case Emotion::ANGRY: // All red
-        eInnerR = 255; eInnerG = 240; eInnerB = 180;
-        eMidR   = 255; eMidG   =  50; eMidB   =  10;
-        eOuterR = 200; eOuterG =   5; eOuterB =   5;
-        break;
-      case Emotion::HAPPY: // Blue
+      case Emotion::SURPRISED: // Blue
         eInnerR = 200; eInnerG = 230; eInnerB = 255;
         eMidR   =  60; eMidG   = 140; eMidB   = 255;
         eOuterR =  10; eOuterG =  40; eOuterB = 220;
+        break;
+      case Emotion::HAPPY: // Purple
+        eInnerR = 230; eInnerG = 190; eInnerB = 255;
+        eMidR   = 160; eMidG   =  60; eMidB   = 255;
+        eOuterR = 100; eOuterG =  20; eOuterB = 200;
         break;
       default: // NORMAL — no override
         eInnerR = eInnerG = eInnerB = 0;
@@ -279,8 +274,8 @@ void App::DrawUI(bool isStreamMode) {
     DrawText(scaleBuf, 10, 80, 16, {200, 200, 200, 180});
 
     // Detected emotion
-    const char* emotionNames[] = {"Normal", "Surprised!", "Angry!", "Happy!"};
-    Color emotionColors[] = {{200,200,200,200}, {200,150,255,255}, {255,80,80,255}, {100,180,255,255}};
+    const char* emotionNames[] = {"Normal", "Surprised!", "Happy!"};
+    Color emotionColors[] = {{200,200,200,200}, {100,180,255,255}, {200,150,255,255}};
     int eidx = (int)m_currentEmotion;
     char emotionBuf[64];
     snprintf(emotionBuf, sizeof(emotionBuf), "Emotion: %s (%.0f%%)",

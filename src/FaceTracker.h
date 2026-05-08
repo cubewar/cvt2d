@@ -13,9 +13,8 @@
  */
 enum class Emotion {
     NORMAL    = 0,
-    SURPRISED = 1,  // Wide eyes + open mouth → purple fire
-    ANGRY     = 2,  // Furrowed brows → red fire
-    HAPPY     = 3   // Smile/laugh → blue fire
+    SURPRISED = 1,  // Wide eyes + open mouth → blue fire
+    HAPPY     = 2   // Smile/laugh → purple fire
 };
 
 /**
