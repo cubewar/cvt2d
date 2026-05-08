@@ -140,15 +140,18 @@ void App::Update(float dt) {
 
   // Apply fire scale override and microphone volume boost
   float micVol = m_mic.GetVolume();        // 0.0 to 1.0
-  float micBoost = 1.0f + (micVol * m_sharedConfig.data->voiceMultiplier);
+  float voiceMulti = m_sharedConfig.data ? m_sharedConfig.data->voiceMultiplier : 3.0f;
+  float micBoost = 1.0f + (micVol * voiceMulti);
   m_particles.SetFireScale(m_fireHead.GetFireScale() * fireScaleMulti *
                            micBoost);
 
   // Apply particle opacity and life ratios
-  m_particles.SetParticleOpacity(m_sharedConfig.data->particleOpacity);
-  m_particles.SetLifeRatios(m_sharedConfig.data->innerRatio, 
-                            m_sharedConfig.data->midRatio, 
-                            m_sharedConfig.data->outerRatio);
+  if (m_sharedConfig.data) {
+    m_particles.SetParticleOpacity(m_sharedConfig.data->particleOpacity);
+    m_particles.SetLifeRatios(m_sharedConfig.data->innerRatio, 
+                              m_sharedConfig.data->midRatio, 
+                              m_sharedConfig.data->outerRatio);
+  }
 
   // --- Update particles ---
   m_particles.Update(dt);
@@ -284,9 +287,6 @@ void App::Shutdown() {
   if (m_suitTexture.id != 0) {
     UnloadTexture(m_suitTexture);
   }
-
-  delete[] m_cameraPixels;
-  m_cameraPixels = nullptr;
 
   CloseWindow();
 }
