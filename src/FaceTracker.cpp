@@ -188,6 +188,19 @@ void FaceTracker::CaptureLoop()
                     try {
                         m_landmarkNet.forward(outs, m_landmarkNet.getUnconnectedOutLayersNames());
                         
+                        // One-time debug: print all output shapes
+                        static bool debugPrinted = false;
+                        if (!debugPrinted) {
+                            std::cout << "[FaceTracker] ONNX model has " << outs.size() << " outputs:" << std::endl;
+                            for (int oi = 0; oi < (int)outs.size(); oi++) {
+                                std::cout << "  Output[" << oi << "]: total=" << outs[oi].total()
+                                          << " dims=" << outs[oi].dims;
+                                for (int d = 0; d < outs[oi].dims; d++)
+                                    std::cout << (d == 0 ? " shape=[" : ",") << outs[oi].size[d];
+                                std::cout << "]" << std::endl;
+                            }
+                        }
+                        
                         // Find the output containing 1404+ values (468 landmarks × 3 coords)
                         int lmOutIdx = -1;
                         for (int oi = 0; oi < (int)outs.size(); oi++) {
@@ -199,19 +212,43 @@ void FaceTracker::CaptureLoop()
                             float cropW = (float)(px2 - px1);
                             float cropH = (float)(py2 - py1);
                             
+                            // Auto-detect coordinate range: check if values are in [0,1] or [0,192]
+                            // Sample the first 10 landmarks to determine scale
+                            float maxVal = 0.0f;
+                            for (int i = 0; i < 30; i++) { // first 10 landmarks × 3
+                                float v = std::abs(data[i]);
+                                if (v > maxVal) maxVal = v;
+                            }
+                            // If max < 2.0, values are likely normalized [0,1]
+                            // If max > 2.0, values are likely in pixel space [0,192]
+                            float coordScale = (maxVal > 2.0f) ? 192.0f : 1.0f;
+                            
+                            if (!debugPrinted) {
+                                std::cout << "[FaceTracker] Landmark output[" << lmOutIdx << "]:"
+                                          << " maxVal=" << maxVal 
+                                          << " coordScale=" << coordScale << std::endl;
+                                // Print first 3 landmarks
+                                for (int i = 0; i < 3; i++) {
+                                    std::cout << "  Landmark[" << i << "]: x=" << data[i*3+0]
+                                              << " y=" << data[i*3+1]
+                                              << " z=" << data[i*3+2] << std::endl;
+                                }
+                                debugPrinted = true;
+                            }
+                            
                             // --- Extract all 468 landmarks ---
                             for (int i = 0; i < 468; i++) {
-                                float lx = data[i * 3 + 0]; // x in 192×192 crop space
-                                float ly = data[i * 3 + 1]; // y in 192×192 crop space
-                                float lz = data[i * 3 + 2]; // z depth
+                                float lx = data[i * 3 + 0] / coordScale; // normalized to [0,1] in crop
+                                float ly = data[i * 3 + 1] / coordScale;
+                                float lz = data[i * 3 + 2] / coordScale;
                                 
-                                // Transform from crop space → full frame normalized [0,1]
-                                float framePixX = px1 + (lx / 192.0f) * cropW;
-                                float framePixY = py1 + (ly / 192.0f) * cropH;
+                                // Transform from crop-normalized → full frame normalized [0,1]
+                                float framePixX = px1 + lx * cropW;
+                                float framePixY = py1 + ly * cropH;
                                 
                                 bestFace.landmarks[i][0] = framePixX / (float)frameW;
                                 bestFace.landmarks[i][1] = framePixY / (float)frameH;
-                                bestFace.landmarks[i][2] = lz / 192.0f;
+                                bestFace.landmarks[i][2] = lz;
                             }
                             bestFace.landmarkCount = 468;
                             bestFace.hasLandmarks = true;
