@@ -63,6 +63,10 @@ private:
     float m_suitSwayAngle   = 0.0f;
     float m_lastFaceX       = 0.5f;
 
+    // Smoothed emotion state (for smooth color transitions)
+    Emotion m_currentEmotion = Emotion::NORMAL;
+    float m_emotionBlend     = 0.0f; // 0 = base colors, 1 = full emotion colors
+
     // IPC
     SharedConfig m_sharedConfig;
 };

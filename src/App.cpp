@@ -138,6 +138,86 @@ void App::Update(float dt) {
 
   m_particles.SetSmokeMode(!face.detected);
 
+  // --- Emotion-based fire color override ---
+  if (face.detected && face.hasLandmarks) {
+    // Smoothly transition toward detected emotion
+    if (face.emotion != Emotion::NORMAL) {
+      m_currentEmotion = face.emotion;
+      m_emotionBlend += (face.emotionBlend - m_emotionBlend) * dt * 4.0f;
+      m_emotionBlend = std::min(1.0f, m_emotionBlend);
+    } else {
+      // Fade back to normal
+      m_emotionBlend -= dt * 2.0f;
+      if (m_emotionBlend <= 0.0f) {
+        m_emotionBlend = 0.0f;
+        m_currentEmotion = Emotion::NORMAL;
+      }
+    }
+  } else {
+    // No face — fade to normal
+    m_emotionBlend = std::max(0.0f, m_emotionBlend - dt * 2.0f);
+  }
+
+  // Apply emotion color override by blending with base colors
+  if (m_emotionBlend > 0.01f) {
+    // Emotion target colors
+    unsigned char eInnerR, eInnerG, eInnerB;
+    unsigned char eMidR, eMidG, eMidB;
+    unsigned char eOuterR, eOuterG, eOuterB;
+
+    switch (m_currentEmotion) {
+      case Emotion::SURPRISED: // Purple
+        eInnerR = 230; eInnerG = 190; eInnerB = 255;
+        eMidR   = 160; eMidG   =  60; eMidB   = 255;
+        eOuterR = 100; eOuterG =  20; eOuterB = 200;
+        break;
+      case Emotion::ANGRY: // All red
+        eInnerR = 255; eInnerG = 240; eInnerB = 180;
+        eMidR   = 255; eMidG   =  50; eMidB   =  10;
+        eOuterR = 200; eOuterG =   5; eOuterB =   5;
+        break;
+      case Emotion::HAPPY: // Blue
+        eInnerR = 200; eInnerG = 230; eInnerB = 255;
+        eMidR   =  60; eMidG   = 140; eMidB   = 255;
+        eOuterR =  10; eOuterG =  40; eOuterB = 220;
+        break;
+      default: // NORMAL — no override
+        eInnerR = eInnerG = eInnerB = 0;
+        eMidR = eMidG = eMidB = 0;
+        eOuterR = eOuterG = eOuterB = 0;
+        break;
+    }
+
+    if (m_currentEmotion != Emotion::NORMAL) {
+      // Get current base colors from shared config (or defaults)
+      unsigned char bInnerR = 255, bInnerG = 240, bInnerB = 180;
+      unsigned char bMidR = 255, bMidG = 140, bMidB = 20;
+      unsigned char bOuterR = 220, bOuterG = 30, bOuterB = 5;
+      if (m_sharedConfig.data) {
+        bInnerR = (unsigned char)m_sharedConfig.data->innerR;
+        bInnerG = (unsigned char)m_sharedConfig.data->innerG;
+        bInnerB = (unsigned char)m_sharedConfig.data->innerB;
+        bMidR   = (unsigned char)m_sharedConfig.data->midR;
+        bMidG   = (unsigned char)m_sharedConfig.data->midG;
+        bMidB   = (unsigned char)m_sharedConfig.data->midB;
+        bOuterR = (unsigned char)m_sharedConfig.data->outerR;
+        bOuterG = (unsigned char)m_sharedConfig.data->outerG;
+        bOuterB = (unsigned char)m_sharedConfig.data->outerB;
+      }
+
+      float t = m_emotionBlend;
+      auto lerp = [](unsigned char a, unsigned char b, float t) -> unsigned char {
+        return (unsigned char)(a + (int)(b - a) * t);
+      };
+
+      m_particles.SetPhaseColors(
+        {lerp(bInnerR, eInnerR, t), lerp(bInnerG, eInnerG, t), lerp(bInnerB, eInnerB, t), 255},
+        {lerp(bMidR, eMidR, t),     lerp(bMidG, eMidG, t),     lerp(bMidB, eMidB, t),     255},
+        {lerp(bOuterR, eOuterR, t), lerp(bOuterG, eOuterG, t), lerp(bOuterB, eOuterB, t), 255}
+      );
+    }
+  }
+
   // Apply fire scale override and microphone volume boost
   float micVol = m_mic.GetVolume();        // 0.0 to 1.0
   float voiceMulti = m_sharedConfig.data ? m_sharedConfig.data->voiceMultiplier : 3.0f;
@@ -197,6 +277,15 @@ void App::DrawUI(bool isStreamMode) {
     snprintf(scaleBuf, sizeof(scaleBuf), "Fire Scale: %.2f",
              m_fireHead.GetFireScale());
     DrawText(scaleBuf, 10, 80, 16, {200, 200, 200, 180});
+
+    // Detected emotion
+    const char* emotionNames[] = {"Normal", "Surprised!", "Angry!", "Happy!"};
+    Color emotionColors[] = {{200,200,200,200}, {200,150,255,255}, {255,80,80,255}, {100,180,255,255}};
+    int eidx = (int)m_currentEmotion;
+    char emotionBuf[64];
+    snprintf(emotionBuf, sizeof(emotionBuf), "Emotion: %s (%.0f%%)",
+             emotionNames[eidx], m_emotionBlend * 100.0f);
+    DrawText(emotionBuf, 10, 100, 16, emotionColors[eidx]);
 
     // Controls reminder
     DrawText("[D] Debug  [C] Camera  [B] Dark BG  [UP/DOWN] Opacity", 10,

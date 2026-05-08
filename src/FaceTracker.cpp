@@ -302,11 +302,91 @@ void FaceTracker::CaptureLoop()
                                 }
                             }
                             
-                            // --- Emotion: mouth open ratio ---
-                            const int UPPER_LIP = 13, LOWER_LIP = 14;
-                            float mouthGap = std::abs(bestFace.landmarks[LOWER_LIP][1] - bestFace.landmarks[UPPER_LIP][1]);
-                            float faceHNorm = bestFace.height;
-                            bestFace.emotionScore = std::min(1.0f, (mouthGap / std::max(0.01f, faceHNorm)) * 5.0f);
+                            // --- Emotion detection from landmarks ---
+                            // Key landmark indices (MediaPipe 468-point mesh)
+                            // Eyes: measure openness via vertical/horizontal ratio
+                            const int L_EYE_TOP = 159, L_EYE_BOT = 145, L_EYE_L = 33, L_EYE_R = 133;
+                            const int R_EYE_TOP = 386, R_EYE_BOT = 374, R_EYE_L = 362, R_EYE_R = 263;
+                            // Mouth
+                            const int MOUTH_TOP = 13, MOUTH_BOT = 14, MOUTH_L = 61, MOUTH_R = 291;
+                            // Eyebrows (inner points near nose bridge)
+                            const int L_BROW_INNER = 107, R_BROW_INNER = 336;
+                            const int L_BROW_MID = 66, R_BROW_MID = 296;
+                            
+                            auto dist = [&](int a, int b) {
+                                float dx = bestFace.landmarks[a][0] - bestFace.landmarks[b][0];
+                                float dy = bestFace.landmarks[a][1] - bestFace.landmarks[b][1];
+                                return sqrtf(dx*dx + dy*dy);
+                            };
+                            
+                            float faceH = bestFace.height;
+                            float faceW = bestFace.width;
+                            if (faceH < 0.01f) faceH = 0.01f;
+                            if (faceW < 0.01f) faceW = 0.01f;
+                            
+                            // Eye Aspect Ratio (vertical / horizontal, normalized to face size)
+                            float leftEAR  = dist(L_EYE_TOP, L_EYE_BOT) / dist(L_EYE_L, L_EYE_R);
+                            float rightEAR = dist(R_EYE_TOP, R_EYE_BOT) / dist(R_EYE_L, R_EYE_R);
+                            float avgEAR = (leftEAR + rightEAR) / 2.0f;
+                            
+                            // Mouth Aspect Ratio (vertical / horizontal)
+                            float mouthVert = dist(MOUTH_TOP, MOUTH_BOT);
+                            float mouthHoriz = dist(MOUTH_L, MOUTH_R);
+                            float MAR = mouthVert / std::max(0.001f, mouthHoriz);
+                            
+                            // Smile ratio: mouth corners higher than mouth center
+                            // In screen coords, Y increases downward, so corners BELOW center = frown
+                            float mouthCenterY = (bestFace.landmarks[MOUTH_TOP][1] + bestFace.landmarks[MOUTH_BOT][1]) / 2.0f;
+                            float cornerAvgY = (bestFace.landmarks[MOUTH_L][1] + bestFace.landmarks[MOUTH_R][1]) / 2.0f;
+                            float smileRatio = (mouthCenterY - cornerAvgY) / faceH; // positive = smile
+                            
+                            // Brow furrow: how close inner brows are to eyes (normalized to face height)
+                            float leftBrowDist  = (bestFace.landmarks[L_EYE_TOP][1] - bestFace.landmarks[L_BROW_MID][1]) / faceH;
+                            float rightBrowDist = (bestFace.landmarks[R_EYE_TOP][1] - bestFace.landmarks[R_BROW_MID][1]) / faceH;
+                            float avgBrowDist = (leftBrowDist + rightBrowDist) / 2.0f;
+                            // Inner brow pinch: horizontal distance between inner brow points
+                            float browPinch = dist(L_BROW_INNER, R_BROW_INNER) / faceW;
+                            
+                            // --- Classify emotion ---
+                            float surpriseScore = 0.0f, angryScore = 0.0f, happyScore = 0.0f;
+                            
+                            // Surprised: wide eyes (high EAR) + mouth open (high MAR)
+                            if (avgEAR > 0.32f && MAR > 0.35f) {
+                                surpriseScore = std::min(1.0f, (avgEAR - 0.32f) * 8.0f + (MAR - 0.35f) * 3.0f);
+                            }
+                            
+                            // Angry: brows pulled down close to eyes + brows pinched together
+                            if (avgBrowDist < 0.06f && browPinch < 0.22f) {
+                                angryScore = std::min(1.0f, (0.06f - avgBrowDist) * 25.0f + (0.22f - browPinch) * 5.0f);
+                            }
+                            
+                            // Happy: mouth corners raised (smile) + wide mouth
+                            if (smileRatio > 0.02f) {
+                                happyScore = std::min(1.0f, smileRatio * 15.0f);
+                            }
+                            
+                            // Pick the strongest emotion
+                            bestFace.emotion = Emotion::NORMAL;
+                            bestFace.emotionBlend = 0.0f;
+                            
+                            float maxScore = 0.15f; // Threshold to trigger an emotion
+                            if (surpriseScore > maxScore) {
+                                bestFace.emotion = Emotion::SURPRISED;
+                                bestFace.emotionBlend = std::min(1.0f, surpriseScore);
+                                maxScore = surpriseScore;
+                            }
+                            if (angryScore > maxScore) {
+                                bestFace.emotion = Emotion::ANGRY;
+                                bestFace.emotionBlend = std::min(1.0f, angryScore);
+                                maxScore = angryScore;
+                            }
+                            if (happyScore > maxScore) {
+                                bestFace.emotion = Emotion::HAPPY;
+                                bestFace.emotionBlend = std::min(1.0f, happyScore);
+                            }
+                            
+                            // Keep emotionScore for backward compatibility (mouth open amount)
+                            bestFace.emotionScore = std::min(1.0f, MAR * 2.0f);
                         }
                     } catch (...) {
                         // Forward failed, fallback to simulated emotion

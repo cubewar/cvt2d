@@ -9,6 +9,16 @@
 #include <atomic>
 
 /**
+ * Detected facial emotion type.
+ */
+enum class Emotion {
+    NORMAL    = 0,
+    SURPRISED = 1,  // Wide eyes + open mouth → purple fire
+    ANGRY     = 2,  // Furrowed brows → red fire
+    HAPPY     = 3   // Smile/laugh → blue fire
+};
+
+/**
  * FaceTracker — OpenCV DNN-based face detection running in a separate thread.
  * 
  * Captures webcam frames and runs a Caffe SSD face detector to produce
@@ -27,6 +37,8 @@ struct FaceData {
     float yaw       = 0.0f;  // Head rotation angle Y (degrees)
     float roll      = 0.0f;  // Head rotation angle Z (degrees)
     float emotionScore = 0.5f; // 0.0 = Chill, 1.0 = Excited
+    Emotion emotion    = Emotion::NORMAL;
+    float emotionBlend = 0.0f; // 0.0 = neutral, 1.0 = fully in emotion
     bool  detected  = false;
     int   frameW    = 640;   // Camera frame width in pixels
     int   frameH    = 480;   // Camera frame height in pixels
