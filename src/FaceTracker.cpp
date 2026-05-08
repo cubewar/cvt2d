@@ -355,9 +355,38 @@ void FaceTracker::CaptureLoop()
                                 surpriseScore = std::min(1.0f, (avgEAR - 0.32f) * 8.0f + (MAR - 0.35f) * 3.0f);
                             }
                             
-                            // Angry: brows pulled down close to eyes + brows pinched together
-                            if (avgBrowDist < 0.06f && browPinch < 0.22f) {
-                                angryScore = std::min(1.0f, (0.06f - avgBrowDist) * 25.0f + (0.22f - browPinch) * 5.0f);
+                            // Angry: additive scoring from multiple signals
+                            // (works across different face structures)
+                            {
+                                float angryPoints = 0.0f;
+                                
+                                // Signal 1: Brow furrow — brows closer to eyes than normal
+                                if (avgBrowDist < 0.10f) {
+                                    angryPoints += (0.10f - avgBrowDist) * 8.0f;
+                                }
+                                
+                                // Signal 2: Brow pinch — inner brows pulled together
+                                if (browPinch < 0.28f) {
+                                    angryPoints += (0.28f - browPinch) * 3.0f;
+                                }
+                                
+                                // Signal 3: Frown — mouth corners pulled down (negative smile)
+                                if (smileRatio < -0.01f) {
+                                    angryPoints += std::abs(smileRatio) * 12.0f;
+                                }
+                                
+                                // Signal 4: Pressed/tense lips — mouth closed tight (low MAR)
+                                if (MAR < 0.15f) {
+                                    angryPoints += (0.15f - MAR) * 4.0f;
+                                }
+                                
+                                // Signal 5: Squinted eyes — narrowed eyes (low EAR)
+                                if (avgEAR < 0.22f) {
+                                    angryPoints += (0.22f - avgEAR) * 5.0f;
+                                }
+                                
+                                // Need at least 2 signals contributing to count as angry
+                                angryScore = std::min(1.0f, angryPoints * 0.5f);
                             }
                             
                             // Happy: mouth corners raised (smile) + wide mouth
@@ -369,7 +398,7 @@ void FaceTracker::CaptureLoop()
                             bestFace.emotion = Emotion::NORMAL;
                             bestFace.emotionBlend = 0.0f;
                             
-                            float maxScore = 0.15f; // Threshold to trigger an emotion
+                            float maxScore = 0.30f; // 30% minimum to trigger an emotion
                             if (surpriseScore > maxScore) {
                                 bestFace.emotion = Emotion::SURPRISED;
                                 bestFace.emotionBlend = std::min(1.0f, surpriseScore);
