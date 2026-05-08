@@ -187,23 +187,97 @@ void FaceTracker::CaptureLoop()
                     std::vector<cv::Mat> outs;
                     try {
                         m_landmarkNet.forward(outs, m_landmarkNet.getUnconnectedOutLayersNames());
-                        if (!outs.empty() && outs[0].total() >= 1404) {
-                            float* data = (float*)outs[0].data;
-                            // Landmark 13: Upper inner lip, 14: Lower inner lip
-                            float mouthTopY = data[13 * 3 + 1];
-                            float mouthBottomY = data[14 * 3 + 1];
-                            float mouthOpen = std::abs(mouthBottomY - mouthTopY) / 192.0f; // Normalized to crop size
+                        
+                        // Find the output containing 1404+ values (468 landmarks × 3 coords)
+                        int lmOutIdx = -1;
+                        for (int oi = 0; oi < (int)outs.size(); oi++) {
+                            if (outs[oi].total() >= 1404) { lmOutIdx = oi; break; }
+                        }
+                        
+                        if (lmOutIdx >= 0) {
+                            float* data = (float*)outs[lmOutIdx].data;
+                            float cropW = (float)(px2 - px1);
+                            float cropH = (float)(py2 - py1);
                             
-                            // Map mouth open to emotion score (0.0 to 1.0)
-                            bestFace.emotionScore = std::min(1.0f, mouthOpen * 10.0f);
+                            // --- Extract all 468 landmarks ---
+                            for (int i = 0; i < 468; i++) {
+                                float lx = data[i * 3 + 0]; // x in 192×192 crop space
+                                float ly = data[i * 3 + 1]; // y in 192×192 crop space
+                                float lz = data[i * 3 + 2]; // z depth
+                                
+                                // Transform from crop space → full frame normalized [0,1]
+                                float framePixX = px1 + (lx / 192.0f) * cropW;
+                                float framePixY = py1 + (ly / 192.0f) * cropH;
+                                
+                                bestFace.landmarks[i][0] = framePixX / (float)frameW;
+                                bestFace.landmarks[i][1] = framePixY / (float)frameH;
+                                bestFace.landmarks[i][2] = lz / 192.0f;
+                            }
+                            bestFace.landmarkCount = 468;
+                            bestFace.hasLandmarks = true;
+                            
+                            // --- Head pose estimation using solvePnP ---
+                            // MediaPipe landmark indices for key facial points
+                            const int NOSE_TIP = 1, CHIN = 152;
+                            const int LEFT_EYE = 33, RIGHT_EYE = 263;
+                            const int LEFT_MOUTH = 61, RIGHT_MOUTH = 291;
+                            
+                            // 3D model points (generic face proportions, in mm)
+                            std::vector<cv::Point3d> modelPts = {
+                                {0.0, 0.0, 0.0},           // Nose tip
+                                {0.0, -330.0, -65.0},      // Chin
+                                {-225.0, 170.0, -135.0},   // Left eye corner
+                                {225.0, 170.0, -135.0},    // Right eye corner
+                                {-150.0, -150.0, -125.0},  // Left mouth corner
+                                {150.0, -150.0, -125.0}    // Right mouth corner
+                            };
+                            
+                            // 2D image points from detected landmarks (pixel coords)
+                            const int indices[] = {NOSE_TIP, CHIN, LEFT_EYE, RIGHT_EYE, LEFT_MOUTH, RIGHT_MOUTH};
+                            std::vector<cv::Point2d> imgPts;
+                            for (int idx : indices) {
+                                imgPts.push_back({
+                                    bestFace.landmarks[idx][0] * frameW,
+                                    bestFace.landmarks[idx][1] * frameH
+                                });
+                            }
+                            
+                            // Approximate camera intrinsics
+                            double focal = (double)frameW;
+                            cv::Mat camMat = (cv::Mat_<double>(3,3) <<
+                                focal, 0, frameW / 2.0,
+                                0, focal, frameH / 2.0,
+                                0, 0, 1);
+                            cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64F);
+                            
+                            cv::Mat rvec, tvec;
+                            if (cv::solvePnP(modelPts, imgPts, camMat, distCoeffs, rvec, tvec)) {
+                                cv::Mat R;
+                                cv::Rodrigues(rvec, R);
+                                
+                                // Extract Euler angles from rotation matrix
+                                double sy = sqrt(R.at<double>(0,0) * R.at<double>(0,0) +
+                                                 R.at<double>(1,0) * R.at<double>(1,0));
+                                if (sy > 1e-6) {
+                                    bestFace.pitch = (float)(atan2(R.at<double>(2,1), R.at<double>(2,2)) * 180.0 / CV_PI);
+                                    bestFace.yaw   = (float)(atan2(-R.at<double>(2,0), sy) * 180.0 / CV_PI);
+                                    bestFace.roll  = (float)(atan2(R.at<double>(1,0), R.at<double>(0,0)) * 180.0 / CV_PI);
+                                }
+                            }
+                            
+                            // --- Emotion: mouth open ratio ---
+                            const int UPPER_LIP = 13, LOWER_LIP = 14;
+                            float mouthGap = std::abs(bestFace.landmarks[LOWER_LIP][1] - bestFace.landmarks[UPPER_LIP][1]);
+                            float faceHNorm = bestFace.height;
+                            bestFace.emotionScore = std::min(1.0f, (mouthGap / std::max(0.01f, faceHNorm)) * 5.0f);
                         }
                     } catch (...) {
-                        // Forward failed, fallback
+                        // Forward failed, fallback to simulated emotion
                         bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
                     }
                 }
             } else {
-                // Simulate emotion for testing
+                // Simulate emotion for testing (no landmark model)
                 bestFace.emotionScore = 0.5f + 0.5f * sinf((float)cv::getTickCount() / cv::getTickFrequency());
             }
         }
@@ -216,9 +290,17 @@ void FaceTracker::CaptureLoop()
         cv::Mat rgba;
         cv::cvtColor(mirrored, rgba, cv::COLOR_BGR2RGBA);
 
-        // --- Mirror the face X coordinate too ---
+        // --- Mirror face data to match the mirrored display ---
         if (bestFace.detected) {
             bestFace.centerX = 1.0f - bestFace.centerX;
+            // Mirror landmark X coordinates and negate yaw/roll for mirrored view
+            if (bestFace.hasLandmarks) {
+                for (int i = 0; i < bestFace.landmarkCount; i++) {
+                    bestFace.landmarks[i][0] = 1.0f - bestFace.landmarks[i][0];
+                }
+                bestFace.yaw  = -bestFace.yaw;
+                bestFace.roll = -bestFace.roll;
+            }
         }
 
         // --- Update shared data (thread-safe) ---

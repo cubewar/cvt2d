@@ -2,6 +2,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
+#include <opencv2/calib3d.hpp>
 #include <string>
 #include <mutex>
 #include <thread>
@@ -22,13 +23,19 @@ struct FaceData {
     float centerZ   = 0.0f;  // Z-depth proxy
     float width     = 0.0f;  // Normalized [0, 1] — face bounding box width
     float height    = 0.0f;  // Normalized [0, 1] — face bounding box height
-    float pitch     = 0.0f;  // Head rotation angle X
-    float yaw       = 0.0f;  // Head rotation angle Y
-    float roll      = 0.0f;  // Head rotation angle Z
+    float pitch     = 0.0f;  // Head rotation angle X (degrees)
+    float yaw       = 0.0f;  // Head rotation angle Y (degrees)
+    float roll      = 0.0f;  // Head rotation angle Z (degrees)
     float emotionScore = 0.5f; // 0.0 = Chill, 1.0 = Excited
     bool  detected  = false;
     int   frameW    = 640;   // Camera frame width in pixels
     int   frameH    = 480;   // Camera frame height in pixels
+
+    // MediaPipe face landmarks (468 points)
+    static constexpr int MAX_LANDMARKS = 468;
+    float landmarks[MAX_LANDMARKS][3] = {}; // Normalized [0,1] x, y, z
+    int   landmarkCount = 0;
+    bool  hasLandmarks  = false;
 };
 
 class FaceTracker {
